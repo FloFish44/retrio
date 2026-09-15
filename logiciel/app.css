@@ -271,6 +271,40 @@ button { font-family: inherit; cursor: pointer; }
    avec l'attribut hidden posé par app.js. */
 .tab-content[hidden] { display: none; }
 
+/* Onglet Ranger (bêta fonctionnelle) */
+.badge-beta { background: #E3EFE7; color: #2F6B4A; }
+.ranger-tab { margin-top: 0; }
+.ranger-loading, .tool-empty { padding: 40px; text-align: center; color: var(--text-3); background: var(--white); border: 1px solid var(--border); border-radius: 12px; }
+.pro-tool-empty { max-width: 640px; background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 32px; }
+.pro-tool-empty h2 { font-family: var(--font-serif); font-size: 20px; margin: 0 0 10px; color: var(--text); }
+.pro-tool-empty p { color: var(--text-3); line-height: 1.5; margin: 0 0 18px; }
+.tool-head { margin-bottom: 14px; }
+.tool-head .pro-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .08em; color: var(--primary-hover); }
+.tool-head h2 { font-family: var(--font-serif); font-size: 20px; margin: 6px 0; color: var(--text); }
+.tool-head p { color: var(--text-3); margin: 0; font-size: 12px; }
+.ranger-toolbar { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+.ranger-select { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); font-weight: 600; }
+.ranger-select select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); font-size: 12px; color: var(--text); }
+.ranger-filter-row { margin-top: 10px; flex-wrap: wrap; }
+.ranger-bulk-row { display: flex; align-items: center; gap: 16px; margin: 14px 0; flex-wrap: wrap; }
+.ranger-select-all { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-2); font-weight: 600; }
+.ranger-select-all input { accent-color: var(--primary); width: 14px; height: 14px; cursor: pointer; }
+.ranger-selected-count { font-size: 11px; color: var(--text-3); }
+.tool-list { display: flex; flex-direction: column; gap: 8px; }
+.tool-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.tool-card.done { border-color: var(--mint); background: #F1F8F3; }
+.organize-card { display: flex; align-items: center; gap: 14px; }
+.ranger-check-wrap { flex-shrink: 0; }
+.ranger-check { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+.ranger-card-body { flex: 1 1 auto; min-width: 0; }
+.ranger-card-body h3 { font-size: 12.5px; margin: 4px 0 2px; color: var(--text); font-weight: 700; }
+.ranger-card-body small { display: block; color: var(--text-3); font-family: var(--font-mono); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranger-meta { font-family: var(--font-sans) !important; margin-top: 2px; }
+.reason-label { font-size: 9px; font-weight: 800; color: var(--primary-hover); background: #E3EFE7; padding: 3px 8px; border-radius: 999px; }
+.ranger-upsell { text-align: center; background: linear-gradient(135deg, var(--primary) 0%, #143526 100%); color: #F5F1E6; border: none; }
+.ranger-upsell strong { font-family: var(--font-serif); font-size: 15px; }
+.ranger-upsell p { color: #CFE0D3; font-size: 11.5px; margin: 6px 0 12px; }
+
 /* scrollbar */
 .main::-webkit-scrollbar { width: 10px; }
 .main::-webkit-scrollbar-thumb { background: var(--border-btn); border-radius: 999px; }

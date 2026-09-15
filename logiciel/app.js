@@ -7,6 +7,7 @@ const state = {
   lastQuery: "",
   hasScanned: false,
   scanning: false,
+  ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -58,7 +59,9 @@ function bindNav() {
       const map = { recherche: "tabRecherche", doublons: "tabDoublons", ranger: "tabRanger", nettoyage: "tabNettoyage" };
       const el = document.getElementById(map[tab]);
       el.hidden = false;
-      if (tab !== "recherche" && !el.dataset.built) {
+      if (tab === "ranger") {
+        renderRangerTab(el);
+      } else if (tab !== "recherche" && !el.dataset.built) {
         buildLockedTab(tab, el);
         el.dataset.built = "1";
       }
@@ -100,6 +103,181 @@ function buildLockedTab(key, el) {
     <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
     <button class="btn btn-pro">Passer à Retrio Pro</button>
   `;
+}
+
+// -------------------- Ranger vos documents (bêta fonctionnelle) --------------------
+const RANGER_SCHEMES = [
+  { value: "type", label: "Par type de fichier" },
+  { value: "date", label: "Par date (année / mois)" },
+  { value: "type_date", label: "Par type, puis par année" },
+];
+const RANGER_SORTS = [
+  { value: "name", label: "Nom (A → Z)" },
+  { value: "date", label: "Date (récent d'abord)" },
+  { value: "size", label: "Taille (plus gros d'abord)" },
+];
+const RANGER_CATEGORY_LABELS = {
+  pdf: "PDF", images: "Photos & images", videos: "Vidéos", audio: "Musique & audio",
+  documents: "Autres documents", archives: "Archives", autres: "Autres fichiers",
+};
+
+async function renderRangerTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour préparer le rangement. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Préparation du rangement…</div>`;
+  await loadRangerSuggestions(el);
+}
+
+async function loadRangerSuggestions(el) {
+  const data = JSON.parse(await api().organize_suggestions(state.ranger.scheme));
+  state.ranger.suggestions = data.suggestions;
+  state.ranger.freeLimit = data.free_limit;
+  state.ranger.selected = new Set();
+  renderRangerList(el);
+}
+
+function rangerCounts() {
+  const counts = { tous: state.ranger.suggestions.length };
+  state.ranger.suggestions.forEach((s) => { counts[s.category] = (counts[s.category] || 0) + 1; });
+  return counts;
+}
+
+function renderRangerList(el) {
+  const { suggestions, filter, sort, scheme, freeLimit, selected } = state.ranger;
+  const counts = rangerCounts();
+  const filtered = filter === "tous" ? suggestions.slice() : suggestions.filter((s) => s.category === filter);
+  const sorters = {
+    name: (a, b) => a.name.localeCompare(b.name, "fr"),
+    date: (a, b) => b.mtime - a.mtime,
+    size: (a, b) => b.size - a.size,
+  };
+  filtered.sort(sorters[sort]);
+
+  const categoryChips = ["tous", ...Object.keys(RANGER_CATEGORY_LABELS)]
+    .filter((key) => key === "tous" || counts[key])
+    .map((key) => `<button class="chip chip-ranger-filter${filter === key ? " active" : ""}" data-key="${key}">${key === "tous" ? `Tous (${counts.tous || 0})` : `${RANGER_CATEGORY_LABELS[key]} (${counts[key] || 0})`}</button>`)
+    .join("");
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">RANGEMENT · BÊTA</div>
+        <h2>${suggestions.length} proposition(s) de classement</h2>
+        <p>Chaque déplacement est affiché avant validation. Aucun fichier existant n'est écrasé.</p>
+      </div>
+    </div>
+    <div class="ranger-toolbar">
+      <label class="ranger-select">Classer <select id="rangerScheme">${RANGER_SCHEMES.map((s) => `<option value="${s.value}"${s.value === scheme ? " selected" : ""}>${s.label}</option>`).join("")}</select></label>
+      <label class="ranger-select">Trier par <select id="rangerSort">${RANGER_SORTS.map((s) => `<option value="${s.value}"${s.value === sort ? " selected" : ""}>${s.label}</option>`).join("")}</select></label>
+    </div>
+    <div class="filter-row ranger-filter-row">${categoryChips}</div>
+    <div class="ranger-bulk-row">
+      <label class="ranger-select-all"><input type="checkbox" id="rangerSelectAll"> Tout sélectionner</label>
+      <span class="ranger-selected-count" id="rangerSelectedCount">${selected.size} sélectionné(s)</span>
+      <button class="btn btn-primary" id="rangerBulkValidate" disabled>Valider la sélection</button>
+    </div>
+    <div class="tool-list" id="rangerList"></div>
+  `;
+
+  document.getElementById("rangerScheme").onchange = async (e) => {
+    state.ranger.scheme = e.target.value;
+    el.innerHTML = `<div class="ranger-loading">Préparation du rangement…</div>`;
+    await loadRangerSuggestions(el);
+  };
+  document.getElementById("rangerSort").onchange = (e) => { state.ranger.sort = e.target.value; renderRangerList(el); };
+  el.querySelectorAll(".chip-ranger-filter").forEach((chip) => {
+    chip.onclick = () => { state.ranger.filter = chip.dataset.key; renderRangerList(el); };
+  });
+
+  const listEl = document.getElementById("rangerList");
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="tool-empty">Aucun fichier à classer dans cette catégorie.</div>';
+  } else {
+    const actionable = filtered.slice(0, freeLimit);
+    const locked = filtered.slice(freeLimit);
+    actionable.forEach((item) => listEl.appendChild(buildRangerCard(item, el)));
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell";
+      upsell.innerHTML = `<strong>+${locked.length} autre(s) fichier(s) à classer</strong><p>Passez à Retrio Pro pour ranger tous vos fichiers en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      listEl.appendChild(upsell);
+    }
+  }
+
+  const selectAll = document.getElementById("rangerSelectAll");
+  selectAll.onchange = () => {
+    listEl.querySelectorAll(".ranger-check").forEach((cb) => {
+      cb.checked = selectAll.checked;
+      toggleRangerSelection(cb.dataset.path, selectAll.checked);
+    });
+    updateRangerBulkUI();
+  };
+  document.getElementById("rangerBulkValidate").onclick = () => applyRangerBulk(el);
+  updateRangerBulkUI();
+}
+
+function buildRangerCard(item, el) {
+  const card = document.createElement("article");
+  card.className = "tool-card organize-card";
+  const dateLabel = new Date(item.mtime * 1000).toLocaleDateString("fr-FR");
+  card.innerHTML = `
+    <label class="ranger-check-wrap"><input type="checkbox" class="ranger-check" data-path="${escapeHtml(item.path)}"></label>
+    <div class="ranger-card-body">
+      <span class="reason-label">${escapeHtml(item.reason)}</span>
+      <h3>${escapeHtml(item.name)}</h3>
+      <small>→ ${escapeHtml(item.target)}</small>
+      <small class="ranger-meta">${escapeHtml(item.size_human)} · ${dateLabel}</small>
+    </div>
+    <button class="btn btn-primary organize-action">Valider</button>
+  `;
+  card.querySelector(".ranger-check").onchange = (e) => { toggleRangerSelection(item.path, e.target.checked); updateRangerBulkUI(); };
+  card.querySelector(".organize-action").onclick = async (evt) => {
+    evt.currentTarget.disabled = true;
+    const result = await api().apply_organization(item.path, item.target);
+    if (result.ok) {
+      card.classList.add("done");
+      card.innerHTML = '<strong>✓ Fichier classé</strong><small>' + escapeHtml(result.path) + '</small>';
+      state.ranger.selected.delete(item.path);
+      state.ranger.suggestions = state.ranger.suggestions.filter((s) => s.path !== item.path);
+      updateRangerBulkUI();
+    } else {
+      evt.currentTarget.disabled = false;
+      alert(result.error);
+    }
+  };
+  return card;
+}
+
+function toggleRangerSelection(path, checked) {
+  if (checked) state.ranger.selected.add(path);
+  else state.ranger.selected.delete(path);
+}
+
+function updateRangerBulkUI() {
+  const count = state.ranger.selected.size;
+  const countEl = document.getElementById("rangerSelectedCount");
+  if (countEl) countEl.textContent = `${count} sélectionné(s)`;
+  const btn = document.getElementById("rangerBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyRangerBulk(el) {
+  const items = state.ranger.suggestions.filter((s) => state.ranger.selected.has(s.path)).map((s) => ({ path: s.path, target: s.target }));
+  if (!items.length) return;
+  const btn = document.getElementById("rangerBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Classement en cours…";
+  const data = JSON.parse(await api().apply_organization_bulk(JSON.stringify(items)));
+  const okSources = new Set(data.results.filter((r) => r.ok).map((r) => r.source));
+  state.ranger.suggestions = state.ranger.suggestions.filter((s) => !okSources.has(s.path));
+  state.ranger.selected = new Set();
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être déplacés.`);
+  renderRangerList(el);
 }
 
 // -------------------- Réglages / dossiers --------------------

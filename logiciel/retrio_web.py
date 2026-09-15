@@ -28,11 +28,13 @@ import os
 import re
 import sys
 import subprocess
+import shutil
 import threading
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from pdf_content import PdfService, read_pdf
@@ -371,6 +373,7 @@ class FileEntry:
     category: str
     size: int
     badly_named: bool
+    mtime: float = 0.0
     content: str = ""          # extrait de contenu indexé (peut être vide)
     content_lower: str = ""    # version en minuscule, prête pour la recherche
     pages: list = field(default_factory=list)
@@ -478,6 +481,7 @@ def scan_folders(roots: list, progress_cb=None, stop_flag=None, cache_dir=None) 
                         if content: status = 'Texte indexé'
                     entry = FileEntry(path=full_path,name=filename,stem=stem,ext=ext,
                         category=categorize(ext),size=info.st_size,badly_named=is_badly_named(stem),
+                        mtime=info.st_mtime,
                         content=content,content_lower=content.lower(),pages=pages,read_status=status)
                     result.entries.append(entry)
                     result.counts_by_category[entry.category] += 1
@@ -607,6 +611,46 @@ def file_badge(entry) -> tuple:
         return "AUD", COL_TEXT_TERTIARY
     label = ext.lstrip(".").upper()[:4] or "FILE"
     return label, COL_TEXT_TERTIARY
+
+
+# ---------------------------------------------------------------------------
+# Rangement (onglet "Ranger vos documents")
+# ---------------------------------------------------------------------------
+RANGER_FREE_LIMIT = 30
+
+_MONTH_NAMES_FR = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+
+
+def _date_parts(mtime: float):
+    dt = datetime.fromtimestamp(mtime) if mtime else datetime.now()
+    month_folder = f"{dt.month:02d} - {_MONTH_NAMES_FR[dt.month]}"
+    return str(dt.year), month_folder
+
+
+def _safe_target(path: Path) -> Path:
+    """Retourne un nom de destination libre, sans jamais écraser un fichier existant."""
+    if not path.exists():
+        return path
+    for number in range(2, 10000):
+        candidate = path.with_name(f"{path.stem} ({number}){path.suffix}")
+        if not candidate.exists():
+            return candidate
+    raise OSError("Impossible de créer un nom de fichier disponible.")
+
+
+def _suggested_document_name(entry: "FileEntry") -> str:
+    text = f"{entry.stem} {entry.content}".lower()
+    kind = "Document"
+    for word, label in (("facture", "Facture"), ("devis", "Devis"), ("contrat", "Contrat"),
+                        ("assurance", "Assurance"), ("attestation", "Attestation"), ("reçu", "Reçu")):
+        if word in text:
+            kind = label
+            break
+    date_match = re.search(r"\b(20\d{2})[-/.](0?[1-9]|1[0-2])(?:[-/.]\d{1,2})?\b", text)
+    date_label = f"{date_match.group(1)}-{int(date_match.group(2)):02d}" if date_match else ""
+    parts = [part for part in (kind, date_label) if part]
+    return (" - ".join(parts) if parts else entry.stem) + entry.ext
 
 
 # ---------------------------------------------------------------------------
@@ -764,6 +808,70 @@ class Api:
         except Exception:
             pass
         return True
+
+    # -- rangement (onglet "Ranger vos documents") -----------------------------
+    def organize_suggestions(self, scheme="type"):
+        suggestions = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            parent = Path(entry.path).parent
+            folder = CATEGORY_LABELS.get(entry.category, "Autres fichiers")
+            new_name = _suggested_document_name(entry) if entry.badly_named and entry.category in ("pdf", "documents") else entry.name
+            year, month_folder = _date_parts(entry.mtime)
+            if scheme == "date":
+                target = parent / "Retrio - Classé" / year / month_folder / new_name
+            elif scheme == "type_date":
+                target = parent / "Retrio - Classé" / folder / year / new_name
+            else:
+                target = parent / "Retrio - Classé" / folder / new_name
+            if os.path.normcase(str(target)) == os.path.normcase(entry.path):
+                continue
+            suggestions.append({
+                "path": entry.path, "name": entry.name, "target": str(target),
+                "new_name": new_name, "folder": folder, "category": entry.category,
+                "size": entry.size, "size_human": human_size(entry.size), "mtime": entry.mtime,
+                "reason": "Nom peu explicite" if entry.badly_named else "Classement par type",
+            })
+        return json.dumps({
+            "suggestions": suggestions[:500], "count": len(suggestions),
+            "scheme": scheme, "free_limit": RANGER_FREE_LIMIT,
+        })
+
+    def _apply_single_organization(self, path, target):
+        try:
+            source = Path(str(path)).resolve(strict=True)
+            requested = Path(str(target)).resolve(strict=False)
+            known = next((e for e in self.scan_result.entries if os.path.normcase(e.path) == os.path.normcase(str(source))), None)
+            if known is None or not source.is_file():
+                return {"ok": False, "path": str(path), "error": "Ce fichier ne fait pas partie de la dernière analyse."}
+            requested.parent.mkdir(parents=True, exist_ok=True)
+            destination = _safe_target(requested)
+            shutil.move(str(source), str(destination))
+            known.path, known.name, known.stem = str(destination), destination.name, destination.stem
+            return {"ok": True, "path": str(destination), "source": str(source)}
+        except Exception as exc:
+            return {"ok": False, "path": str(path), "error": f"Déplacement impossible : {type(exc).__name__}"}
+
+    def apply_organization(self, path, target):
+        result = self._apply_single_organization(path, target)
+        return {"ok": result["ok"], "path": result.get("path", ""), "error": result.get("error", "")}
+
+    def apply_organization_bulk(self, items_json):
+        try:
+            items = json.loads(items_json) if isinstance(items_json, str) else (items_json or [])
+        except (TypeError, ValueError):
+            return json.dumps({"results": [], "done": 0, "failed": 0})
+        results = []
+        for item in items:
+            item_path = item.get("path") if isinstance(item, dict) else None
+            item_target = item.get("target") if isinstance(item, dict) else None
+            if not item_path or not item_target:
+                results.append({"ok": False, "path": item_path or "", "error": "Fichier invalide"})
+                continue
+            results.append(self._apply_single_organization(item_path, item_target))
+        done = sum(1 for r in results if r["ok"])
+        return json.dumps({"results": results, "done": done, "failed": len(results) - done})
 
 
 def resource_path(*parts):
