@@ -9,6 +9,7 @@ const state = {
   scanning: false,
   ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
   doublons: { groups: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
+  nettoyage: { items: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -67,6 +68,8 @@ function bindNav() {
         renderRangerTab(el);
       } else if (tab === "doublons") {
         renderDoublonsTab(el);
+      } else if (tab === "nettoyage") {
+        renderNettoyageTab(el);
       } else if (tab !== "recherche" && !el.dataset.built) {
         buildLockedTab(tab, el);
         el.dataset.built = "1";
@@ -407,6 +410,115 @@ async function applyDoublonsBulk(el) {
   const data = JSON.parse(await api().move_to_trash_bulk(JSON.stringify(paths)));
   if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être supprimés.`);
   await loadDoublonsGroups(el);
+}
+
+// -------------------- Nettoyage (bêta fonctionnelle) --------------------
+async function renderNettoyageTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour repérer les fichiers à nettoyer. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Recherche des fichiers à nettoyer…</div>`;
+  await loadNettoyageSuggestions(el);
+}
+
+async function loadNettoyageSuggestions(el) {
+  const data = JSON.parse(await api().cleanup_suggestions());
+  state.nettoyage.items = data.items;
+  state.nettoyage.freeLimit = data.free_limit;
+  state.nettoyage.totalRecoverable = data.total_recoverable_human;
+  state.nettoyage.selected = new Set();
+  renderNettoyageList(el);
+}
+
+function renderNettoyageList(el) {
+  const { items, freeLimit, totalRecoverable, selected } = state.nettoyage;
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">NETTOYAGE · BÊTA</div>
+        <h2>${items.length} fichier(s) à nettoyer</h2>
+        <p>${items.length ? `Espace récupérable estimé : ${escapeHtml(totalRecoverable)}. Fichiers temporaires, caches oubliés et gros fichiers anciens.` : "Rien à nettoyer pour le moment."}</p>
+      </div>
+    </div>
+    <div class="ranger-bulk-row">
+      <label class="ranger-select-all"><input type="checkbox" id="nettoyageSelectAll"> Tout sélectionner</label>
+      <span class="ranger-selected-count" id="nettoyageSelectedCount">${selected.size} sélectionné(s)</span>
+      <button class="btn btn-primary" id="nettoyageBulkValidate" disabled>Supprimer la sélection (corbeille)</button>
+    </div>
+    <div class="tool-list" id="nettoyageList"></div>
+  `;
+
+  const listEl = document.getElementById("nettoyageList");
+  if (!items.length) {
+    listEl.innerHTML = '<div class="tool-empty">Aucun fichier temporaire ou ancien détecté.</div>';
+  } else {
+    const actionable = items.slice(0, freeLimit);
+    const locked = items.slice(freeLimit);
+    actionable.forEach((item) => listEl.appendChild(buildNettoyageCard(item)));
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell";
+      upsell.innerHTML = `<strong>+${locked.length} autre(s) fichier(s) à nettoyer</strong><p>Passez à Retrio Pro pour nettoyer tous vos fichiers en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      listEl.appendChild(upsell);
+    }
+  }
+
+  const selectAll = document.getElementById("nettoyageSelectAll");
+  selectAll.onchange = () => {
+    listEl.querySelectorAll(".ranger-check").forEach((cb) => {
+      cb.checked = selectAll.checked;
+      toggleNettoyageSelection(cb.dataset.path, selectAll.checked);
+    });
+    updateNettoyageBulkUI();
+  };
+  document.getElementById("nettoyageBulkValidate").onclick = () => applyNettoyageBulk(el);
+  updateNettoyageBulkUI();
+}
+
+function buildNettoyageCard(item) {
+  const card = document.createElement("article");
+  card.className = "tool-card organize-card";
+  card.innerHTML = `
+    <label class="ranger-check-wrap"><input type="checkbox" class="ranger-check" data-path="${escapeHtml(item.path)}"></label>
+    <div class="ranger-card-body">
+      <span class="reason-label">${escapeHtml(item.reason)}</span>
+      <h3>${escapeHtml(item.name)}</h3>
+      <small>${escapeHtml(item.dir)}</small>
+      <small class="ranger-meta">${escapeHtml(item.size_human)}</small>
+    </div>
+  `;
+  card.querySelector(".ranger-check").onchange = (e) => { toggleNettoyageSelection(item.path, e.target.checked); updateNettoyageBulkUI(); };
+  return card;
+}
+
+function toggleNettoyageSelection(path, checked) {
+  if (checked) state.nettoyage.selected.add(path);
+  else state.nettoyage.selected.delete(path);
+}
+
+function updateNettoyageBulkUI() {
+  const count = state.nettoyage.selected.size;
+  const countEl = document.getElementById("nettoyageSelectedCount");
+  if (countEl) countEl.textContent = `${count} sélectionné(s)`;
+  const btn = document.getElementById("nettoyageBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyNettoyageBulk(el) {
+  const paths = [...state.nettoyage.selected];
+  if (!paths.length) return;
+  if (!confirm(`Envoyer ${paths.length} fichier(s) à la corbeille ?`)) return;
+  const btn = document.getElementById("nettoyageBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Suppression en cours…";
+  const data = JSON.parse(await api().move_to_trash_bulk(JSON.stringify(paths)));
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être supprimés.`);
+  await loadNettoyageSuggestions(el);
 }
 
 // -------------------- Réglages / dossiers --------------------

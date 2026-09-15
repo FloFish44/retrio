@@ -619,6 +619,7 @@ def file_badge(entry) -> tuple:
 # ---------------------------------------------------------------------------
 RANGER_FREE_LIMIT = 30
 DOUBLONS_FREE_LIMIT = 10
+NETTOYAGE_FREE_LIMIT = 10
 
 
 def _file_digest(path: str, chunk_size: int = 1024 * 1024) -> str:
@@ -818,6 +819,37 @@ class Api:
         except Exception:
             pass
         return True
+
+    # -- nettoyage (onglet "Nettoyage") ----------------------------------------
+    def cleanup_suggestions(self):
+        import time as _time
+        now = _time.time()
+        junk_ext = {".tmp", ".temp", ".bak", ".old", ".log", ".cache", ".crdownload",
+                    ".part", ".ds_store", ".swp"}
+        junk_names = {"thumbs.db", "desktop.ini", ".ds_store"}
+        items = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            ext = entry.ext.lower()
+            name_lower = entry.name.lower()
+            is_junk = ext in junk_ext or name_lower in junk_names or name_lower.startswith("~$")
+            age_days = (now - entry.mtime) / 86400 if entry.mtime else 0
+            is_old_large = entry.size > 50 * 1024 * 1024 and age_days > 180
+            if not (is_junk or is_old_large):
+                continue
+            reason = "Fichier temporaire ou cache" if is_junk else "Gros fichier non ouvert depuis longtemps"
+            items.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": reason, "kind": "junk" if is_junk else "old_large",
+            })
+        items.sort(key=lambda i: i["size"], reverse=True)
+        total = sum(i["size"] for i in items)
+        return json.dumps({
+            "items": items[:300], "count": len(items),
+            "free_limit": NETTOYAGE_FREE_LIMIT, "total_recoverable_human": human_size(total),
+        })
 
     # -- doublons (onglet "Doublons") ---------------------------------------
     def find_duplicates(self):
