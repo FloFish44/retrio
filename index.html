@@ -56,6 +56,10 @@
   .site-guides-menu a{padding:9px 11px;border-radius:8px;color:#294235;font-size:.88rem}
   .site-guides-menu a:hover{background:#ECE7D8}
   .video-close{border:0;background:transparent;color:#14251C;font-size:1.7rem;line-height:1;cursor:pointer;padding:5px 8px}
+  .img-lightbox{display:none;position:fixed;inset:0;z-index:110;background:rgba(10,18,14,.9);padding:22px;align-items:center;justify-content:center}
+  .img-lightbox.open{display:flex}
+  .img-lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.5);object-fit:contain}
+  .img-lightbox-close{position:fixed;top:18px;right:22px;border:0;background:rgba(245,241,230,.12);color:#F5F1E6;font-size:1.8rem;line-height:1;cursor:pointer;padding:6px 14px;border-radius:999px}
   @media(max-width:700px){
     .wrap{padding-left:18px;padding-right:18px}
     header .wrap{padding-top:12px!important;padding-bottom:12px!important;gap:12px!important}
@@ -163,6 +167,11 @@
   </div>
 </div>
 
+<div id="img-lightbox" class="img-lightbox" role="dialog" aria-modal="true" onclick="if(event.target===this)closeImgLightbox()">
+  <button type="button" class="img-lightbox-close" aria-label="Fermer l'aperçu" onclick="closeImgLightbox()">×</button>
+  <img id="img-lightbox-img" src="" alt="" />
+</div>
+
 <section id="fonctionnement" class="wrap" style="padding-top:72px;padding-bottom:34px">
   <div style="max-width:760px;margin-bottom:30px">
     <div style="color:#2F6B4A;font-weight:700;font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;margin-bottom:12px">Simple dès la première utilisation</div>
@@ -265,7 +274,7 @@
         <span style="margin-left:8px;color:#F5F1E6;font-weight:600;font-size:.84rem">Retrio</span>
         <span style="background:rgba(217,193,133,.2);color:#D9C185;padding:3px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-left:auto">1 · L'analyse</span>
       </div>
-      <img src="./assets/screenshot-bilan.jpg" alt="Bilan de l'analyse Retrio : 1284 fichiers analysés, 340 PDF, 610 photos, 2,3 Go" style="display:block;width:100%;height:auto" loading="lazy" />
+      <img src="./assets/screenshot-bilan.jpg" alt="Bilan de l'analyse Retrio : 1284 fichiers analysés, 340 PDF, 610 photos, 2,3 Go" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
     </div>
     <div style="background:#14251C;border-radius:18px;overflow:hidden;box-shadow:0 24px 54px rgba(20,37,28,.20)">
       <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:#0E1B14">
@@ -273,7 +282,7 @@
         <span style="margin-left:8px;color:#F5F1E6;font-weight:600;font-size:.84rem">Retrio</span>
         <span style="background:rgba(149,213,178,.18);color:#95D5B2;padding:3px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-left:auto">2 · Le résultat</span>
       </div>
-      <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant en meilleure correspondance" style="display:block;width:100%;height:auto" loading="lazy" />
+      <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant en meilleure correspondance" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
     </div>
   </div>
 </section>
@@ -372,7 +381,9 @@
 <script>
 function openVideoDemo(){var modal=document.getElementById('video-demo'),video=document.getElementById('retrio-demo-video');modal.classList.add('open');document.body.style.overflow='hidden';video.currentTime=0;var playback=video.play();if(playback)playback.catch(function(){})}
 function closeVideoDemo(){var video=document.getElementById('retrio-demo-video');document.getElementById('video-demo').classList.remove('open');document.body.style.overflow='';video.pause()}
-document.addEventListener('keydown',function(event){if(event.key==='Escape')closeVideoDemo()});
+function openImgLightbox(src,alt){var modal=document.getElementById('img-lightbox'),img=document.getElementById('img-lightbox-img');img.src=src;img.alt=alt||'';modal.classList.add('open');document.body.style.overflow='hidden'}
+function closeImgLightbox(){document.getElementById('img-lightbox').classList.remove('open');document.body.style.overflow=''}
+document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeVideoDemo();closeImgLightbox()}});
 (function(){
   var heroPairs = [
     { from: 'SCAN_2840318_001.pdf', to: 'La facture du lave-linge' },
