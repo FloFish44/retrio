@@ -22,6 +22,7 @@ import base64
 import csv
 import ctypes
 import difflib
+import hashlib
 import io
 import json
 import os
@@ -617,6 +618,15 @@ def file_badge(entry) -> tuple:
 # Rangement (onglet "Ranger vos documents")
 # ---------------------------------------------------------------------------
 RANGER_FREE_LIMIT = 30
+DOUBLONS_FREE_LIMIT = 10
+
+
+def _file_digest(path: str, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        while chunk := stream.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 _MONTH_NAMES_FR = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
                    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
@@ -808,6 +818,80 @@ class Api:
         except Exception:
             pass
         return True
+
+    # -- doublons (onglet "Doublons") ---------------------------------------
+    def find_duplicates(self):
+        by_size = defaultdict(list)
+        for entry in self.scan_result.entries:
+            if entry.size > 0 and os.path.isfile(entry.path):
+                by_size[entry.size].append(entry)
+        groups = []
+        for size, candidates in by_size.items():
+            if len(candidates) < 2:
+                continue
+            by_hash = defaultdict(list)
+            for entry in candidates:
+                try:
+                    by_hash[_file_digest(entry.path)].append(entry)
+                except OSError:
+                    continue
+            for digest, entries in by_hash.items():
+                if len(entries) > 1:
+                    ordered = sorted(entries, key=lambda e: (len(e.path), e.path.lower()))
+                    groups.append({
+                        "hash": digest, "size": size, "size_human": human_size(size),
+                        "recoverable": human_size(size * (len(ordered) - 1)),
+                        "files": [{"path": e.path, "name": e.name, "dir": os.path.dirname(e.path), "keep": i == 0}
+                                  for i, e in enumerate(ordered)],
+                    })
+        groups.sort(key=lambda g: g["size"] * (len(g["files"]) - 1), reverse=True)
+        total_recoverable = sum(g["size"] * (len(g["files"]) - 1) for g in groups)
+        return json.dumps({
+            "groups": groups[:200], "count": len(groups),
+            "free_limit": DOUBLONS_FREE_LIMIT, "total_recoverable_human": human_size(total_recoverable),
+        })
+
+    def move_to_trash(self, path):
+        try:
+            source = Path(str(path)).resolve(strict=True)
+            if sys.platform == "win32":
+                from ctypes import wintypes
+
+                class SHFILEOPSTRUCTW(ctypes.Structure):
+                    _fields_ = [
+                        ("hwnd", wintypes.HWND), ("wFunc", wintypes.UINT),
+                        ("pFrom", wintypes.LPCWSTR), ("pTo", wintypes.LPCWSTR),
+                        ("fFlags", wintypes.WORD), ("fAnyOperationsAborted", wintypes.BOOL),
+                        ("hNameMappings", wintypes.LPVOID), ("lpszProgressTitle", wintypes.LPCWSTR),
+                    ]
+                op = SHFILEOPSTRUCTW()
+                op.hwnd = 0
+                op.wFunc = 3  # FO_DELETE
+                op.pFrom = str(source) + "\0\0"
+                op.pTo = None
+                op.fFlags = 0x40 | 0x10 | 0x4  # FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT
+                ret = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op))
+                if ret != 0 or op.fAnyOperationsAborted:
+                    return {"ok": False, "error": "Suppression annulée ou impossible."}
+            else:
+                os.remove(str(source))
+            self.scan_result.entries = [e for e in self.scan_result.entries if os.path.normcase(e.path) != os.path.normcase(str(source))]
+            return {"ok": True}
+        except Exception as exc:
+            return {"ok": False, "error": f"Suppression impossible : {type(exc).__name__}"}
+
+    def move_to_trash_bulk(self, paths_json):
+        try:
+            paths = json.loads(paths_json) if isinstance(paths_json, str) else (paths_json or [])
+        except (TypeError, ValueError):
+            return json.dumps({"results": [], "done": 0, "failed": 0})
+        results = []
+        for p in paths:
+            result = self.move_to_trash(p)
+            result["path"] = p
+            results.append(result)
+        done = sum(1 for r in results if r["ok"])
+        return json.dumps({"results": results, "done": done, "failed": len(results) - done})
 
     # -- rangement (onglet "Ranger vos documents") -----------------------------
     def organize_suggestions(self, scheme="type"):

@@ -8,6 +8,7 @@ const state = {
   hasScanned: false,
   scanning: false,
   ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
+  doublons: { groups: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -61,6 +62,8 @@ function bindNav() {
       el.hidden = false;
       if (tab === "ranger") {
         renderRangerTab(el);
+      } else if (tab === "doublons") {
+        renderDoublonsTab(el);
       } else if (tab !== "recherche" && !el.dataset.built) {
         buildLockedTab(tab, el);
         el.dataset.built = "1";
@@ -278,6 +281,121 @@ async function applyRangerBulk(el) {
   state.ranger.selected = new Set();
   if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être déplacés.`);
   renderRangerList(el);
+}
+
+// -------------------- Doublons (bêta fonctionnelle) --------------------
+async function renderDoublonsTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour repérer les doublons. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Recherche des doublons…</div>`;
+  await loadDoublonsGroups(el);
+}
+
+async function loadDoublonsGroups(el) {
+  const data = JSON.parse(await api().find_duplicates());
+  state.doublons.groups = data.groups;
+  state.doublons.freeLimit = data.free_limit;
+  state.doublons.totalRecoverable = data.total_recoverable_human;
+  state.doublons.selected = new Set();
+  renderDoublonsList(el);
+}
+
+function renderDoublonsList(el) {
+  const { groups, freeLimit, totalRecoverable } = state.doublons;
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">DOUBLONS · BÊTA</div>
+        <h2>${groups.length} groupe(s) de doublons détecté(s)</h2>
+        <p>${groups.length ? `Espace récupérable estimé : ${escapeHtml(totalRecoverable)}.` : "Aucun doublon exact trouvé dans la dernière analyse."}</p>
+      </div>
+    </div>
+    <div class="ranger-bulk-row">
+      <span class="ranger-selected-count" id="doublonsSelectedCount">0 fichier(s) sélectionné(s)</span>
+      <button class="btn btn-primary" id="doublonsBulkValidate" disabled>Supprimer la sélection (corbeille)</button>
+    </div>
+    <div class="tool-list" id="doublonsList"></div>
+  `;
+
+  const listEl = document.getElementById("doublonsList");
+  if (!groups.length) {
+    listEl.innerHTML = '<div class="tool-empty">Rien à nettoyer pour le moment.</div>';
+  } else {
+    const actionable = groups.slice(0, freeLimit);
+    const locked = groups.slice(freeLimit);
+    actionable.forEach((group, idx) => listEl.appendChild(buildDoublonsGroupCard(group, idx, el)));
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell";
+      upsell.innerHTML = `<strong>+${locked.length} autre(s) groupe(s) de doublons</strong><p>Passez à Retrio Pro pour nettoyer tous vos doublons en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      listEl.appendChild(upsell);
+    }
+  }
+
+  document.getElementById("doublonsBulkValidate").onclick = () => applyDoublonsBulk(el);
+  updateDoublonsBulkUI();
+}
+
+function buildDoublonsGroupCard(group, idx, el) {
+  const card = document.createElement("article");
+  card.className = "tool-card doublons-group-card";
+  const rowsHtml = group.files.map((file, fIdx) => `
+    <label class="doublons-file-row${file.keep ? " is-keep" : ""}">
+      <input type="radio" class="doublons-radio" name="doublons-keep-${idx}" data-group="${idx}" data-path="${escapeHtml(file.path)}" ${file.keep ? "checked" : ""}>
+      <div class="doublons-file-body">
+        <strong>${escapeHtml(file.name)}</strong>
+        <small>${escapeHtml(file.dir)}</small>
+      </div>
+      ${file.keep ? '<span class="reason-label">À conserver</span>' : ""}
+    </label>
+  `).join("");
+  card.innerHTML = `
+    <div class="doublons-group-head">
+      <span class="reason-label">${group.files.length} copies identiques</span>
+      <small class="ranger-meta">${escapeHtml(group.size_human)} chacune · ${escapeHtml(group.recoverable)} récupérables</small>
+    </div>
+    <div class="doublons-files">${rowsHtml}</div>
+    <div class="doublons-status"></div>
+  `;
+  const updateSelectionFromCard = () => {
+    const keepPath = card.querySelector(`input[name="doublons-keep-${idx}"]:checked`).dataset.path;
+    group.files.forEach((file) => {
+      if (file.path === keepPath) state.doublons.selected.delete(file.path);
+      else state.doublons.selected.add(file.path);
+    });
+    updateDoublonsBulkUI();
+  };
+  card.querySelectorAll(".doublons-radio").forEach((radio) => {
+    radio.onchange = updateSelectionFromCard;
+  });
+  updateSelectionFromCard();
+  return card;
+}
+
+function updateDoublonsBulkUI() {
+  const count = state.doublons.selected.size;
+  const countEl = document.getElementById("doublonsSelectedCount");
+  if (countEl) countEl.textContent = `${count} fichier(s) sélectionné(s)`;
+  const btn = document.getElementById("doublonsBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyDoublonsBulk(el) {
+  const paths = [...state.doublons.selected];
+  if (!paths.length) return;
+  if (!confirm(`Envoyer ${paths.length} fichier(s) à la corbeille ?`)) return;
+  const btn = document.getElementById("doublonsBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Suppression en cours…";
+  const data = JSON.parse(await api().move_to_trash_bulk(JSON.stringify(paths)));
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être supprimés.`);
+  await loadDoublonsGroups(el);
 }
 
 // -------------------- Réglages / dossiers --------------------
