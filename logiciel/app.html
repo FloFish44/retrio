@@ -6,8 +6,10 @@
 <link rel="stylesheet" href="app.css" />
 </head>
 <body>
+<div class="resize-handle rh-n" data-edge="n"></div><div class="resize-handle rh-s" data-edge="s"></div><div class="resize-handle rh-w" data-edge="w"></div><div class="resize-handle rh-e" data-edge="e"></div><div class="resize-handle rh-nw" data-edge="nw"></div><div class="resize-handle rh-ne" data-edge="ne"></div><div class="resize-handle rh-sw" data-edge="sw"></div><div class="resize-handle rh-se" data-edge="se"></div>
 <header class="titlebar"><div class="pywebview-drag-region">R &nbsp; Retrio · Vos fichiers, en un instant</div><button id="demoBtn">Besoin d’aide ? Voir la démo</button><button id="minBtn" aria-label="Réduire">—</button><button id="maxBtn" aria-label="Agrandir">□</button><button id="closeBtn" aria-label="Fermer">×</button></header>
 <dialog id="demoDialog"><h2>Retrouvez vos fichiers en 4 étapes</h2><p>1. Choisissez vos dossiers.<br>2. Lancez l’analyse locale.<br>3. Consultez le bilan.<br>4. Décrivez ce que vous cherchez.</p><video id="demoVideo" class="demo-video" controls preload="metadata" playsinline><source src="demo-retrio.mp4" type="video/mp4">Votre ordinateur ne peut pas lire cette vidéo.</video><form method="dialog"><button class="btn btn-primary">J’ai compris</button></form></dialog>
+<dialog id="demoDialogDoublons"><h2>Nettoyer vos doublons en 3 étapes</h2><p>1. Retrio repère les fichiers strictement identiques.<br>2. Vous choisissez quelle copie garder.<br>3. Les autres partent à la corbeille en un clic.</p><video id="demoVideoDoublons" class="demo-video" controls preload="metadata" playsinline><source src="demo-doublons.mp4" type="video/mp4">Votre ordinateur ne peut pas lire cette vidéo.</video><form method="dialog"><button class="btn btn-primary">J’ai compris</button></form></dialog>
 
 <div class="app">
 
@@ -27,30 +29,27 @@
         <span class="nav-label">Recherche</span>
       </button>
 
-      <button class="nav-item locked" data-tab="doublons">
+      <button class="nav-item" data-tab="doublons">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
         <span class="nav-label">Doublons</span>
         <span class="nav-right">
-          <span class="badge">Bientôt</span>
-          <svg class="icon lock-icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span class="badge badge-beta">Bêta</span>
         </span>
       </button>
 
-      <button class="nav-item locked" data-tab="ranger">
+      <button class="nav-item" data-tab="ranger">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></span>
         <span class="nav-label">Ranger vos documents</span>
         <span class="nav-right">
-          <span class="badge">Bientôt</span>
-          <svg class="icon lock-icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span class="badge badge-beta">Bêta</span>
         </span>
       </button>
 
-      <button class="nav-item locked" data-tab="nettoyage">
+      <button class="nav-item" data-tab="nettoyage">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M14.5 3.5 20.5 9.5 9.5 20.5H3.5v-6L14.5 3.5Z"/><path d="M13 5 19 11"/></svg></span>
         <span class="nav-label">Nettoyage</span>
         <span class="nav-right">
-          <span class="badge">Bientôt</span>
-          <svg class="icon lock-icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span class="badge badge-beta">Bêta</span>
         </span>
       </button>
     </nav>
@@ -152,9 +151,9 @@
       </div>
 
       <!-- locked tabs -->
-      <div class="tab-content locked-tab" id="tabDoublons" hidden></div>
-      <div class="tab-content locked-tab" id="tabRanger" hidden></div>
-      <div class="tab-content locked-tab" id="tabNettoyage" hidden></div>
+      <div class="tab-content" id="tabDoublons" hidden></div>
+      <div class="tab-content" id="tabRanger" hidden></div>
+      <div class="tab-content" id="tabNettoyage" hidden></div>
     </div>
   </main>
 

@@ -7,6 +7,9 @@ const state = {
   lastQuery: "",
   hasScanned: false,
   scanning: false,
+  ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
+  doublons: { groups: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
+  nettoyage: { items: [], freeLimit: 0, totalRecoverable: "", selected: new Set(), healthScore: null, healthLabel: "", counts: {} },
 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -25,8 +28,27 @@ async function init() {
   const demoVideo = document.getElementById('demoVideo');
   document.getElementById('demoBtn').onclick = () => { demoDialog.showModal(); demoVideo.currentTime = 0; demoVideo.play().catch(() => {}); };
   demoDialog.addEventListener('close', () => demoVideo.pause());
+  const demoDialogDoublons = document.getElementById('demoDialogDoublons');
+  const demoVideoDoublons = document.getElementById('demoVideoDoublons');
+  demoDialogDoublons.addEventListener('close', () => demoVideoDoublons.pause());
   document.getElementById('minBtn').onclick = () => api().minimize();
   document.getElementById('maxBtn').onclick = () => api().toggle_maximize();
+  const dragRegion = document.querySelector('.pywebview-drag-region');
+  if (dragRegion) {
+    dragRegion.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      api().begin_move();
+    });
+    dragRegion.addEventListener('dblclick', () => api().toggle_maximize());
+  }
+  document.querySelectorAll('.resize-handle').forEach((handle) => {
+    handle.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      api().begin_resize(handle.dataset.edge);
+    });
+  });
   document.getElementById('closeBtn').onclick = () => api().close_window();
   document.getElementById('folderScope').onchange = () => runSearch(document.getElementById('searchInput').value);
   document.getElementById('yesBtn').onclick = () => document.getElementById('feedbackText').textContent = 'Parfait, vous pouvez ouvrir votre fichier.';
@@ -58,7 +80,13 @@ function bindNav() {
       const map = { recherche: "tabRecherche", doublons: "tabDoublons", ranger: "tabRanger", nettoyage: "tabNettoyage" };
       const el = document.getElementById(map[tab]);
       el.hidden = false;
-      if (tab !== "recherche" && !el.dataset.built) {
+      if (tab === "ranger") {
+        renderRangerTab(el);
+      } else if (tab === "doublons") {
+        renderDoublonsTab(el);
+      } else if (tab === "nettoyage") {
+        renderNettoyageTab(el);
+      } else if (tab !== "recherche" && !el.dataset.built) {
         buildLockedTab(tab, el);
         el.dataset.built = "1";
       }
@@ -84,10 +112,12 @@ const LOCKED_TABS = {
     ],
   },
   nettoyage: {
-    title: "Le nettoyage sera disponible plus tard.",
+    title: "Un nettoyage plus profond qu'un simple vide-cache.",
     bullets: [
-      "Fichiers temporaires et caches oubliés",
-      "Doublons volumineux repérés",
+      "Quasi-doublons repérés par le contenu des documents (pas juste le nom)",
+      "Téléchargements oubliés depuis des mois",
+      "Photos en rafale regroupées automatiquement",
+      "Score de santé de votre PC à chaque analyse",
       "Rien n'est supprimé sans accord",
     ],
   },
@@ -100,6 +130,453 @@ function buildLockedTab(key, el) {
     <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
     <button class="btn btn-pro">Passer à Retrio Pro</button>
   `;
+}
+
+// -------------------- Ranger vos documents (bêta fonctionnelle) --------------------
+const RANGER_SCHEMES = [
+  { value: "type", label: "Par type de fichier" },
+  { value: "date", label: "Par date (année / mois)" },
+  { value: "type_date", label: "Par type, puis par année" },
+];
+const RANGER_SORTS = [
+  { value: "name", label: "Nom (A → Z)" },
+  { value: "date", label: "Date (récent d'abord)" },
+  { value: "size", label: "Taille (plus gros d'abord)" },
+];
+const RANGER_CATEGORY_LABELS = {
+  pdf: "PDF", images: "Photos & images", videos: "Vidéos", audio: "Musique & audio",
+  documents: "Autres documents", archives: "Archives", autres: "Autres fichiers",
+};
+
+async function renderRangerTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour préparer le rangement. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Préparation du rangement…</div>`;
+  await loadRangerSuggestions(el);
+}
+
+async function loadRangerSuggestions(el) {
+  const data = JSON.parse(await api().organize_suggestions(state.ranger.scheme));
+  state.ranger.suggestions = data.suggestions;
+  state.ranger.freeLimit = data.free_limit;
+  state.ranger.selected = new Set();
+  renderRangerList(el);
+}
+
+function rangerCounts() {
+  const counts = { tous: state.ranger.suggestions.length };
+  state.ranger.suggestions.forEach((s) => { counts[s.category] = (counts[s.category] || 0) + 1; });
+  return counts;
+}
+
+function renderRangerList(el) {
+  const { suggestions, filter, sort, scheme, freeLimit, selected } = state.ranger;
+  const counts = rangerCounts();
+  const filtered = filter === "tous" ? suggestions.slice() : suggestions.filter((s) => s.category === filter);
+  const sorters = {
+    name: (a, b) => a.name.localeCompare(b.name, "fr"),
+    date: (a, b) => b.mtime - a.mtime,
+    size: (a, b) => b.size - a.size,
+  };
+  filtered.sort(sorters[sort]);
+
+  const categoryChips = ["tous", ...Object.keys(RANGER_CATEGORY_LABELS)]
+    .filter((key) => key === "tous" || counts[key])
+    .map((key) => `<button class="chip chip-ranger-filter${filter === key ? " active" : ""}" data-key="${key}">${key === "tous" ? `Tous (${counts.tous || 0})` : `${RANGER_CATEGORY_LABELS[key]} (${counts[key] || 0})`}</button>`)
+    .join("");
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">RANGEMENT · BÊTA</div>
+        <h2>${suggestions.length} proposition(s) de classement</h2>
+        <p>Chaque déplacement est affiché avant validation. Aucun fichier existant n'est écrasé.</p>
+      </div>
+    </div>
+    <div class="ranger-toolbar">
+      <label class="ranger-select">Classer <select id="rangerScheme">${RANGER_SCHEMES.map((s) => `<option value="${s.value}"${s.value === scheme ? " selected" : ""}>${s.label}</option>`).join("")}</select></label>
+      <label class="ranger-select">Trier par <select id="rangerSort">${RANGER_SORTS.map((s) => `<option value="${s.value}"${s.value === sort ? " selected" : ""}>${s.label}</option>`).join("")}</select></label>
+    </div>
+    <div class="filter-row ranger-filter-row">${categoryChips}</div>
+    <div class="ranger-bulk-row">
+      <label class="ranger-select-all"><input type="checkbox" id="rangerSelectAll"> Tout sélectionner</label>
+      <span class="ranger-selected-count" id="rangerSelectedCount">${selected.size} sélectionné(s)</span>
+      <button class="btn btn-primary" id="rangerBulkValidate" disabled>Valider la sélection</button>
+    </div>
+    <div class="tool-list" id="rangerList"></div>
+  `;
+
+  document.getElementById("rangerScheme").onchange = async (e) => {
+    state.ranger.scheme = e.target.value;
+    el.innerHTML = `<div class="ranger-loading">Préparation du rangement…</div>`;
+    await loadRangerSuggestions(el);
+  };
+  document.getElementById("rangerSort").onchange = (e) => { state.ranger.sort = e.target.value; renderRangerList(el); };
+  el.querySelectorAll(".chip-ranger-filter").forEach((chip) => {
+    chip.onclick = () => { state.ranger.filter = chip.dataset.key; renderRangerList(el); };
+  });
+
+  const listEl = document.getElementById("rangerList");
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="tool-empty">Aucun fichier à classer dans cette catégorie.</div>';
+  } else {
+    const actionable = filtered.slice(0, freeLimit);
+    const locked = filtered.slice(freeLimit);
+    actionable.forEach((item) => listEl.appendChild(buildRangerCard(item, el)));
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell";
+      upsell.innerHTML = `<strong>+${locked.length} autre(s) fichier(s) à classer</strong><p>Passez à Retrio Pro pour ranger tous vos fichiers en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      listEl.appendChild(upsell);
+    }
+  }
+
+  const selectAll = document.getElementById("rangerSelectAll");
+  selectAll.onchange = () => {
+    listEl.querySelectorAll(".ranger-check").forEach((cb) => {
+      cb.checked = selectAll.checked;
+      toggleRangerSelection(cb.dataset.path, selectAll.checked);
+    });
+    updateRangerBulkUI();
+  };
+  document.getElementById("rangerBulkValidate").onclick = () => applyRangerBulk(el);
+  updateRangerBulkUI();
+}
+
+function buildRangerCard(item, el) {
+  const card = document.createElement("article");
+  card.className = "tool-card organize-card";
+  const dateLabel = new Date(item.mtime * 1000).toLocaleDateString("fr-FR");
+  card.innerHTML = `
+    <label class="ranger-check-wrap"><input type="checkbox" class="ranger-check" data-path="${escapeHtml(item.path)}"></label>
+    <div class="ranger-card-body">
+      <span class="reason-label">${escapeHtml(item.reason)}</span>
+      <h3>${escapeHtml(item.name)}</h3>
+      <small>→ ${escapeHtml(item.target)}</small>
+      <small class="ranger-meta">${escapeHtml(item.size_human)} · ${dateLabel}</small>
+    </div>
+    <button class="btn btn-primary organize-action">Valider</button>
+  `;
+  card.querySelector(".ranger-check").onchange = (e) => { toggleRangerSelection(item.path, e.target.checked); updateRangerBulkUI(); };
+  card.querySelector(".organize-action").onclick = async (evt) => {
+    evt.currentTarget.disabled = true;
+    const result = await api().apply_organization(item.path, item.target);
+    if (result.ok) {
+      card.classList.add("done");
+      card.innerHTML = '<strong>✓ Fichier classé</strong><small>' + escapeHtml(result.path) + '</small>';
+      state.ranger.selected.delete(item.path);
+      state.ranger.suggestions = state.ranger.suggestions.filter((s) => s.path !== item.path);
+      updateRangerBulkUI();
+    } else {
+      evt.currentTarget.disabled = false;
+      alert(result.error);
+    }
+  };
+  return card;
+}
+
+function toggleRangerSelection(path, checked) {
+  if (checked) state.ranger.selected.add(path);
+  else state.ranger.selected.delete(path);
+}
+
+function updateRangerBulkUI() {
+  const count = state.ranger.selected.size;
+  const countEl = document.getElementById("rangerSelectedCount");
+  if (countEl) countEl.textContent = `${count} sélectionné(s)`;
+  const btn = document.getElementById("rangerBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyRangerBulk(el) {
+  const items = state.ranger.suggestions.filter((s) => state.ranger.selected.has(s.path)).map((s) => ({ path: s.path, target: s.target }));
+  if (!items.length) return;
+  const btn = document.getElementById("rangerBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Classement en cours…";
+  const data = JSON.parse(await api().apply_organization_bulk(JSON.stringify(items)));
+  const okSources = new Set(data.results.filter((r) => r.ok).map((r) => r.source));
+  state.ranger.suggestions = state.ranger.suggestions.filter((s) => !okSources.has(s.path));
+  state.ranger.selected = new Set();
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être déplacés.`);
+  renderRangerList(el);
+}
+
+// -------------------- Doublons (bêta fonctionnelle) --------------------
+async function renderDoublonsTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour repérer les doublons. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Recherche des doublons…</div>`;
+  await loadDoublonsGroups(el);
+}
+
+async function loadDoublonsGroups(el) {
+  const data = JSON.parse(await api().find_duplicates());
+  state.doublons.groups = data.groups;
+  state.doublons.freeLimit = data.free_limit;
+  state.doublons.totalRecoverable = data.total_recoverable_human;
+  state.doublons.selected = new Set();
+  renderDoublonsList(el);
+}
+
+function renderDoublonsList(el) {
+  const { groups, freeLimit, totalRecoverable } = state.doublons;
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">DOUBLONS · BÊTA</div>
+        <h2>${groups.length} groupe(s) de doublons détecté(s)</h2>
+        <p>${groups.length ? `Espace récupérable estimé : ${escapeHtml(totalRecoverable)}.` : "Aucun doublon exact trouvé dans la dernière analyse."}</p>
+      </div>
+      <button class="btn-mini" id="doublonsDemoBtn">Voir la démo</button>
+    </div>
+    <div class="ranger-bulk-row">
+      <span class="ranger-selected-count" id="doublonsSelectedCount">0 fichier(s) sélectionné(s)</span>
+      <button class="btn btn-primary" id="doublonsBulkValidate" disabled>Supprimer la sélection (corbeille)</button>
+    </div>
+    <div class="tool-list" id="doublonsList"></div>
+  `;
+
+  const listEl = document.getElementById("doublonsList");
+  if (!groups.length) {
+    listEl.innerHTML = '<div class="tool-empty">Rien à nettoyer pour le moment.</div>';
+  } else {
+    const actionable = groups.slice(0, freeLimit);
+    const locked = groups.slice(freeLimit);
+    actionable.forEach((group, idx) => listEl.appendChild(buildDoublonsGroupCard(group, idx, el)));
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell";
+      upsell.innerHTML = `<strong>+${locked.length} autre(s) groupe(s) de doublons</strong><p>Passez à Retrio Pro pour nettoyer tous vos doublons en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      listEl.appendChild(upsell);
+    }
+  }
+
+  document.getElementById("doublonsBulkValidate").onclick = () => applyDoublonsBulk(el);
+  document.getElementById("doublonsDemoBtn").onclick = () => {
+    const dlg = document.getElementById("demoDialogDoublons");
+    const vid = document.getElementById("demoVideoDoublons");
+    dlg.showModal();
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+  };
+  updateDoublonsBulkUI();
+}
+
+function buildDoublonsGroupCard(group, idx, el) {
+  const card = document.createElement("article");
+  card.className = "tool-card doublons-group-card";
+  const rowsHtml = group.files.map((file, fIdx) => `
+    <label class="doublons-file-row${file.keep ? " is-keep" : ""}">
+      <input type="radio" class="doublons-radio" name="doublons-keep-${idx}" data-group="${idx}" data-path="${escapeHtml(file.path)}" ${file.keep ? "checked" : ""}>
+      <div class="doublons-file-body">
+        <strong>${escapeHtml(file.name)}</strong>
+        <small>${escapeHtml(file.dir)}</small>
+      </div>
+      ${file.keep ? '<span class="reason-label">À conserver</span>' : ""}
+    </label>
+  `).join("");
+  card.innerHTML = `
+    <div class="doublons-group-head">
+      <span class="reason-label">${group.files.length} copies identiques</span>
+      <small class="ranger-meta">${escapeHtml(group.size_human)} chacune · ${escapeHtml(group.recoverable)} récupérables</small>
+    </div>
+    <div class="doublons-files">${rowsHtml}</div>
+    <div class="doublons-status"></div>
+  `;
+  const updateSelectionFromCard = () => {
+    const keepPath = card.querySelector(`input[name="doublons-keep-${idx}"]:checked`).dataset.path;
+    group.files.forEach((file) => {
+      if (file.path === keepPath) state.doublons.selected.delete(file.path);
+      else state.doublons.selected.add(file.path);
+    });
+    updateDoublonsBulkUI();
+  };
+  card.querySelectorAll(".doublons-radio").forEach((radio) => {
+    radio.onchange = updateSelectionFromCard;
+  });
+  updateSelectionFromCard();
+  return card;
+}
+
+function updateDoublonsBulkUI() {
+  const count = state.doublons.selected.size;
+  const countEl = document.getElementById("doublonsSelectedCount");
+  if (countEl) countEl.textContent = `${count} fichier(s) sélectionné(s)`;
+  const btn = document.getElementById("doublonsBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyDoublonsBulk(el) {
+  const paths = [...state.doublons.selected];
+  if (!paths.length) return;
+  if (!confirm(`Envoyer ${paths.length} fichier(s) à la corbeille ?`)) return;
+  const btn = document.getElementById("doublonsBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Suppression en cours…";
+  const data = JSON.parse(await api().move_to_trash_bulk(JSON.stringify(paths)));
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être supprimés.`);
+  await loadDoublonsGroups(el);
+}
+
+// -------------------- Nettoyage (bêta fonctionnelle) --------------------
+const NETTOYAGE_KIND_LABELS = {
+  junk: "Fichiers temporaires & caches",
+  old_large: "Gros fichiers anciens",
+  near_duplicate: "Quasi-doublons (analyse de contenu)",
+  forgotten_download: "Téléchargements oubliés",
+  burst_photo: "Photos en rafale",
+};
+const NETTOYAGE_KIND_ORDER = ["near_duplicate", "burst_photo", "forgotten_download", "old_large", "junk"];
+
+async function renderNettoyageTab(el) {
+  if (!state.hasScanned) {
+    el.className = "tab-content";
+    el.innerHTML = `<div class="pro-tool-empty"><h2>Analysez d'abord vos dossiers</h2><p>Retrio utilise la dernière analyse pour repérer les fichiers à nettoyer. Revenez à Recherche, choisissez vos dossiers et lancez l'analyse.</p><button class="btn btn-primary ranger-go-search">Retour à la recherche</button></div>`;
+    el.querySelector(".ranger-go-search").onclick = () => document.querySelector('.nav-item[data-tab="recherche"]').click();
+    return;
+  }
+  el.className = "tab-content ranger-tab";
+  el.innerHTML = `<div class="ranger-loading">Analyse approfondie en cours (contenu, doublons, photos)…</div>`;
+  await loadNettoyageSuggestions(el);
+}
+
+async function loadNettoyageSuggestions(el) {
+  const data = JSON.parse(await api().cleanup_suggestions());
+  state.nettoyage.items = data.items;
+  state.nettoyage.freeLimit = data.free_limit;
+  state.nettoyage.totalRecoverable = data.total_recoverable_human;
+  state.nettoyage.healthScore = data.health_score;
+  state.nettoyage.healthLabel = data.health_label;
+  state.nettoyage.counts = data.counts;
+  state.nettoyage.selected = new Set();
+  renderNettoyageList(el);
+}
+
+function renderNettoyageList(el) {
+  const { items, freeLimit, totalRecoverable, selected, healthScore, healthLabel, counts } = state.nettoyage;
+
+  el.innerHTML = `
+    <div class="tool-head">
+      <div>
+        <div class="pro-eyebrow">NETTOYAGE · BÊTA</div>
+        <h2>Nettoyage profond</h2>
+        <p>${items.length ? `${items.length} fichier(s) repérés · espace récupérable estimé : ${escapeHtml(totalRecoverable)}.` : "Rien à signaler pour le moment : votre PC est propre."}</p>
+      </div>
+    </div>
+    <div class="health-banner">
+      <div class="health-score-circle">${healthScore ?? "–"}</div>
+      <div class="health-banner-body">
+        <strong>Score de santé : ${escapeHtml(healthLabel || "")}</strong>
+        <small>Basé sur les fichiers temporaires, quasi-doublons, téléchargements oubliés et photos en rafale détectés dans votre dernière analyse.</small>
+      </div>
+    </div>
+    <div class="ranger-bulk-row">
+      <label class="ranger-select-all"><input type="checkbox" id="nettoyageSelectAll"> Tout sélectionner</label>
+      <span class="ranger-selected-count" id="nettoyageSelectedCount">${selected.size} sélectionné(s)</span>
+      <button class="btn btn-primary" id="nettoyageBulkValidate" disabled>Supprimer la sélection (corbeille)</button>
+    </div>
+    <div id="nettoyageSections"></div>
+  `;
+
+  const sectionsEl = document.getElementById("nettoyageSections");
+  if (!items.length) {
+    sectionsEl.innerHTML = '<div class="tool-empty">Aucun fichier temporaire, quasi-doublon ou oublié détecté.</div>';
+  } else {
+    const actionable = items.slice(0, freeLimit);
+    const locked = items.slice(freeLimit);
+    const byKind = {};
+    actionable.forEach((item) => { (byKind[item.kind] = byKind[item.kind] || []).push(item); });
+
+    NETTOYAGE_KIND_ORDER.filter((kind) => byKind[kind]?.length).forEach((kind) => {
+      const section = document.createElement("div");
+      section.innerHTML = `<div class="nettoyage-section-title">${escapeHtml(NETTOYAGE_KIND_LABELS[kind])} (${counts?.[kind] ?? byKind[kind].length})</div>`;
+      const list = document.createElement("div");
+      list.className = "tool-list";
+      byKind[kind].forEach((item) => list.appendChild(buildNettoyageCard(item)));
+      section.appendChild(list);
+      sectionsEl.appendChild(section);
+    });
+
+    if (locked.length) {
+      const upsell = document.createElement("article");
+      upsell.className = "tool-card ranger-upsell nettoyage-upsell";
+      upsell.innerHTML = `
+        <strong>+${locked.length} élément(s) supplémentaire(s) détecté(s)</strong>
+        <p>Retrio Pro va plus loin qu'un simple nettoyeur de cache :</p>
+        <ul>
+          <li>Quasi-doublons repérés par le <strong>contenu</strong> des documents, pas juste leur nom</li>
+          <li>Téléchargements oubliés depuis des mois</li>
+          <li>Photos en rafale regroupées automatiquement</li>
+          <li>Score de santé complet, mis à jour à chaque analyse</li>
+        </ul>
+        <button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      sectionsEl.appendChild(upsell);
+    }
+  }
+
+  const selectAll = document.getElementById("nettoyageSelectAll");
+  selectAll.onchange = () => {
+    sectionsEl.querySelectorAll(".ranger-check").forEach((cb) => {
+      cb.checked = selectAll.checked;
+      toggleNettoyageSelection(cb.dataset.path, selectAll.checked);
+    });
+    updateNettoyageBulkUI();
+  };
+  document.getElementById("nettoyageBulkValidate").onclick = () => applyNettoyageBulk(el);
+  updateNettoyageBulkUI();
+}
+
+function buildNettoyageCard(item) {
+  const card = document.createElement("article");
+  card.className = "tool-card organize-card";
+  card.innerHTML = `
+    <label class="ranger-check-wrap"><input type="checkbox" class="ranger-check" data-path="${escapeHtml(item.path)}"></label>
+    <div class="ranger-card-body">
+      <span class="reason-label">${escapeHtml(item.reason)}</span>
+      <h3>${escapeHtml(item.name)}</h3>
+      <small>${escapeHtml(item.dir)}</small>
+      <small class="ranger-meta">${escapeHtml(item.size_human)}</small>
+    </div>
+  `;
+  card.querySelector(".ranger-check").onchange = (e) => { toggleNettoyageSelection(item.path, e.target.checked); updateNettoyageBulkUI(); };
+  return card;
+}
+
+function toggleNettoyageSelection(path, checked) {
+  if (checked) state.nettoyage.selected.add(path);
+  else state.nettoyage.selected.delete(path);
+}
+
+function updateNettoyageBulkUI() {
+  const count = state.nettoyage.selected.size;
+  const countEl = document.getElementById("nettoyageSelectedCount");
+  if (countEl) countEl.textContent = `${count} sélectionné(s)`;
+  const btn = document.getElementById("nettoyageBulkValidate");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function applyNettoyageBulk(el) {
+  const paths = [...state.nettoyage.selected];
+  if (!paths.length) return;
+  if (!confirm(`Envoyer ${paths.length} fichier(s) à la corbeille ?`)) return;
+  const btn = document.getElementById("nettoyageBulkValidate");
+  btn.disabled = true;
+  btn.textContent = "Suppression en cours…";
+  const data = JSON.parse(await api().move_to_trash_bulk(JSON.stringify(paths)));
+  if (data.failed) alert(`${data.failed} fichier(s) n'ont pas pu être supprimés.`);
+  await loadNettoyageSuggestions(el);
 }
 
 // -------------------- Réglages / dossiers --------------------

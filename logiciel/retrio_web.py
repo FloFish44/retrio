@@ -22,17 +22,20 @@ import base64
 import csv
 import ctypes
 import difflib
+import hashlib
 import io
 import json
 import os
 import re
 import sys
 import subprocess
+import shutil
 import threading
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from pdf_content import PdfService, read_pdf
@@ -371,6 +374,7 @@ class FileEntry:
     category: str
     size: int
     badly_named: bool
+    mtime: float = 0.0
     content: str = ""          # extrait de contenu indexé (peut être vide)
     content_lower: str = ""    # version en minuscule, prête pour la recherche
     pages: list = field(default_factory=list)
@@ -478,6 +482,7 @@ def scan_folders(roots: list, progress_cb=None, stop_flag=None, cache_dir=None) 
                         if content: status = 'Texte indexé'
                     entry = FileEntry(path=full_path,name=filename,stem=stem,ext=ext,
                         category=categorize(ext),size=info.st_size,badly_named=is_badly_named(stem),
+                        mtime=info.st_mtime,
                         content=content,content_lower=content.lower(),pages=pages,read_status=status)
                     result.entries.append(entry)
                     result.counts_by_category[entry.category] += 1
@@ -610,6 +615,56 @@ def file_badge(entry) -> tuple:
 
 
 # ---------------------------------------------------------------------------
+# Rangement (onglet "Ranger vos documents")
+# ---------------------------------------------------------------------------
+RANGER_FREE_LIMIT = 30
+DOUBLONS_FREE_LIMIT = 10
+NETTOYAGE_FREE_LIMIT = 10
+
+
+def _file_digest(path: str, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        while chunk := stream.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+_MONTH_NAMES_FR = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+
+
+def _date_parts(mtime: float):
+    dt = datetime.fromtimestamp(mtime) if mtime else datetime.now()
+    month_folder = f"{dt.month:02d} - {_MONTH_NAMES_FR[dt.month]}"
+    return str(dt.year), month_folder
+
+
+def _safe_target(path: Path) -> Path:
+    """Retourne un nom de destination libre, sans jamais écraser un fichier existant."""
+    if not path.exists():
+        return path
+    for number in range(2, 10000):
+        candidate = path.with_name(f"{path.stem} ({number}){path.suffix}")
+        if not candidate.exists():
+            return candidate
+    raise OSError("Impossible de créer un nom de fichier disponible.")
+
+
+def _suggested_document_name(entry: "FileEntry") -> str:
+    text = f"{entry.stem} {entry.content}".lower()
+    kind = "Document"
+    for word, label in (("facture", "Facture"), ("devis", "Devis"), ("contrat", "Contrat"),
+                        ("assurance", "Assurance"), ("attestation", "Attestation"), ("reçu", "Reçu")):
+        if word in text:
+            kind = label
+            break
+    date_match = re.search(r"\b(20\d{2})[-/.](0?[1-9]|1[0-2])(?:[-/.]\d{1,2})?\b", text)
+    date_label = f"{date_match.group(1)}-{int(date_match.group(2)):02d}" if date_match else ""
+    parts = [part for part in (kind, date_label) if part]
+    return (" - ".join(parts) if parts else entry.stem) + entry.ext
+
+
+# ---------------------------------------------------------------------------
 # Pont pywebview : expose la logique métier ci-dessus au JavaScript de
 # app.html / app.js. AUCUNE logique métier n'est dupliquée ici — cette
 # classe ne fait que sérialiser des dataclasses Python en JSON et router les
@@ -695,6 +750,39 @@ class Api:
         self._stop.set()
         self.window.destroy()
 
+    # -- deplacement/redimensionnement natifs (fenetre sans bordure) -------
+    _RESIZE_EDGES = {"w": 1, "e": 2, "n": 3, "nw": 4, "ne": 5, "s": 6, "sw": 7, "se": 8}
+
+    def _hwnd(self):
+        if sys.platform != 'win32':
+            return None
+        try:
+            hwnd = ctypes.windll.user32.FindWindowW(None, APP_NAME)
+            return hwnd or None
+        except Exception:
+            return None
+
+    def begin_move(self):
+        hwnd = self._hwnd()
+        if not hwnd:
+            return
+        try:
+            ctypes.windll.user32.ReleaseCapture()
+            ctypes.windll.user32.SendMessageW(hwnd, 0x0112, 0xF010, 0)  # WM_SYSCOMMAND, SC_MOVE
+        except Exception:
+            pass
+
+    def begin_resize(self, edge):
+        direction = self._RESIZE_EDGES.get(edge)
+        hwnd = self._hwnd()
+        if not hwnd or not direction:
+            return
+        try:
+            ctypes.windll.user32.ReleaseCapture()
+            ctypes.windll.user32.SendMessageW(hwnd, 0x0112, 0xF000 + direction, 0)  # WM_SYSCOMMAND, SC_SIZE
+        except Exception:
+            pass
+
     def search(self, query, type_filter, folder=""):
         self.type_filter = type_filter or "tous"
         pool = self._filtered(self.scan_result.entries, self.type_filter)
@@ -764,6 +852,291 @@ class Api:
         except Exception:
             pass
         return True
+
+    # -- nettoyage (onglet "Nettoyage") ----------------------------------------
+    #
+    # Ce que ne font pas les nettoyeurs génériques (CCleaner et consorts) :
+    # Retrio a déjà lu le CONTENU des documents pour la recherche, donc il
+    # peut repérer des quasi-doublons (même facture enregistrée deux fois
+    # sous des noms différents) que les outils "par octet" ne voient jamais.
+    def _cleanup_junk_and_old(self, now):
+        junk_ext = {".tmp", ".temp", ".bak", ".old", ".log", ".cache", ".crdownload",
+                    ".part", ".ds_store", ".swp"}
+        junk_names = {"thumbs.db", "desktop.ini", ".ds_store"}
+        items = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            ext = entry.ext.lower()
+            name_lower = entry.name.lower()
+            is_junk = ext in junk_ext or name_lower in junk_names or name_lower.startswith("~$")
+            age_days = (now - entry.mtime) / 86400 if entry.mtime else 0
+            is_old_large = entry.size > 50 * 1024 * 1024 and age_days > 180
+            if not (is_junk or is_old_large):
+                continue
+            reason = "Fichier temporaire ou cache" if is_junk else "Gros fichier non ouvert depuis longtemps"
+            items.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": reason, "kind": "junk" if is_junk else "old_large",
+            })
+        return items
+
+    def _cleanup_near_duplicates(self):
+        candidates = [e for e in self.scan_result.entries
+                      if e.category in ("documents", "pdf") and len(e.content_lower or "") > 200
+                      and os.path.isfile(e.path)]
+        candidates.sort(key=lambda e: e.size)
+        items = []
+        seen = set()
+        limit = 260  # borne le nombre de comparaisons (coût O(n²))
+        for i, a in enumerate(candidates[:limit]):
+            if a.path in seen:
+                continue
+            for b in candidates[i + 1:limit]:
+                if b.path in seen:
+                    continue
+                if a.size and b.size and (max(a.size, b.size) / max(1, min(a.size, b.size))) > 1.6:
+                    continue
+                ratio = difflib.SequenceMatcher(None, a.content_lower, b.content_lower).quick_ratio()
+                if 0.82 <= ratio < 0.995:
+                    worse = a if (a.size <= b.size) else b
+                    keep = b if worse is a else a
+                    items.append({
+                        "path": worse.path, "name": worse.name, "dir": os.path.dirname(worse.path),
+                        "size": worse.size, "size_human": human_size(worse.size),
+                        "reason": f"Quasi-doublon de « {keep.name} » (contenu {int(ratio * 100)}% similaire)",
+                        "kind": "near_duplicate",
+                    })
+                    seen.add(worse.path)
+                    break
+        return items
+
+    def _cleanup_forgotten_downloads(self, now):
+        items = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            parent_lower = os.path.dirname(entry.path).lower()
+            if "téléchargement" not in parent_lower and "telechargement" not in parent_lower and "download" not in parent_lower:
+                continue
+            age_days = (now - entry.mtime) / 86400 if entry.mtime else 0
+            if age_days < 60:
+                continue
+            items.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": f"Dans Téléchargements depuis {int(age_days)} jours, jamais déplacé",
+                "kind": "forgotten_download",
+            })
+        return items
+
+    def _cleanup_burst_photos(self):
+        photos = [e for e in self.scan_result.entries
+                  if e.category == "images" and os.path.isfile(e.path) and e.mtime]
+        by_dir = defaultdict(list)
+        for entry in photos:
+            by_dir[os.path.dirname(entry.path)].append(entry)
+        items = []
+        for _, entries in by_dir.items():
+            entries.sort(key=lambda e: e.mtime)
+            cluster = [entries[0]] if entries else []
+            for entry in entries[1:]:
+                if entry.mtime - cluster[-1].mtime <= 30:
+                    cluster.append(entry)
+                else:
+                    if len(cluster) >= 3:
+                        items.extend(self._burst_cluster_items(cluster))
+                    cluster = [entry]
+            if len(cluster) >= 3:
+                items.extend(self._burst_cluster_items(cluster))
+        return items
+
+    @staticmethod
+    def _burst_cluster_items(cluster):
+        best = max(cluster, key=lambda e: e.size)
+        out = []
+        for entry in cluster:
+            if entry.path == best.path:
+                continue
+            out.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": f"Photo en rafale, proche de « {best.name} » ({len(cluster)} photos prises à quelques secondes d'écart)",
+                "kind": "burst_photo",
+            })
+        return out
+
+    def cleanup_suggestions(self):
+        import time as _time
+        now = _time.time()
+        items = []
+        items += self._cleanup_junk_and_old(now)
+        items += self._cleanup_near_duplicates()
+        items += self._cleanup_forgotten_downloads(now)
+        items += self._cleanup_burst_photos()
+        items.sort(key=lambda i: i["size"], reverse=True)
+        total = sum(i["size"] for i in items)
+
+        total_files = max(1, len(self.scan_result.entries))
+        ratio_issues = len(items) / total_files
+        health_score = max(15, round(100 - min(80, ratio_issues * 400)))
+        if health_score >= 90:
+            health_label = "Excellent"
+        elif health_score >= 70:
+            health_label = "Bon"
+        elif health_score >= 50:
+            health_label = "Moyen"
+        else:
+            health_label = "À nettoyer"
+
+        counts = {"junk": 0, "old_large": 0, "near_duplicate": 0, "forgotten_download": 0, "burst_photo": 0}
+        for item in items:
+            counts[item["kind"]] = counts.get(item["kind"], 0) + 1
+
+        return json.dumps({
+            "items": items[:400], "count": len(items),
+            "free_limit": NETTOYAGE_FREE_LIMIT, "total_recoverable_human": human_size(total),
+            "health_score": health_score, "health_label": health_label, "counts": counts,
+        })
+
+    # -- doublons (onglet "Doublons") ---------------------------------------
+    def find_duplicates(self):
+        by_size = defaultdict(list)
+        for entry in self.scan_result.entries:
+            if entry.size > 0 and os.path.isfile(entry.path):
+                by_size[entry.size].append(entry)
+        groups = []
+        for size, candidates in by_size.items():
+            if len(candidates) < 2:
+                continue
+            by_hash = defaultdict(list)
+            for entry in candidates:
+                try:
+                    by_hash[_file_digest(entry.path)].append(entry)
+                except OSError:
+                    continue
+            for digest, entries in by_hash.items():
+                if len(entries) > 1:
+                    ordered = sorted(entries, key=lambda e: (len(e.path), e.path.lower()))
+                    groups.append({
+                        "hash": digest, "size": size, "size_human": human_size(size),
+                        "recoverable": human_size(size * (len(ordered) - 1)),
+                        "files": [{"path": e.path, "name": e.name, "dir": os.path.dirname(e.path), "keep": i == 0}
+                                  for i, e in enumerate(ordered)],
+                    })
+        groups.sort(key=lambda g: g["size"] * (len(g["files"]) - 1), reverse=True)
+        total_recoverable = sum(g["size"] * (len(g["files"]) - 1) for g in groups)
+        return json.dumps({
+            "groups": groups[:200], "count": len(groups),
+            "free_limit": DOUBLONS_FREE_LIMIT, "total_recoverable_human": human_size(total_recoverable),
+        })
+
+    def move_to_trash(self, path):
+        try:
+            source = Path(str(path)).resolve(strict=True)
+            if sys.platform == "win32":
+                from ctypes import wintypes
+
+                class SHFILEOPSTRUCTW(ctypes.Structure):
+                    _fields_ = [
+                        ("hwnd", wintypes.HWND), ("wFunc", wintypes.UINT),
+                        ("pFrom", wintypes.LPCWSTR), ("pTo", wintypes.LPCWSTR),
+                        ("fFlags", wintypes.WORD), ("fAnyOperationsAborted", wintypes.BOOL),
+                        ("hNameMappings", wintypes.LPVOID), ("lpszProgressTitle", wintypes.LPCWSTR),
+                    ]
+                op = SHFILEOPSTRUCTW()
+                op.hwnd = 0
+                op.wFunc = 3  # FO_DELETE
+                op.pFrom = str(source) + "\0\0"
+                op.pTo = None
+                op.fFlags = 0x40 | 0x10 | 0x4  # FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT
+                ret = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op))
+                if ret != 0 or op.fAnyOperationsAborted:
+                    return {"ok": False, "error": "Suppression annulée ou impossible."}
+            else:
+                os.remove(str(source))
+            self.scan_result.entries = [e for e in self.scan_result.entries if os.path.normcase(e.path) != os.path.normcase(str(source))]
+            return {"ok": True}
+        except Exception as exc:
+            return {"ok": False, "error": f"Suppression impossible : {type(exc).__name__}"}
+
+    def move_to_trash_bulk(self, paths_json):
+        try:
+            paths = json.loads(paths_json) if isinstance(paths_json, str) else (paths_json or [])
+        except (TypeError, ValueError):
+            return json.dumps({"results": [], "done": 0, "failed": 0})
+        results = []
+        for p in paths:
+            result = self.move_to_trash(p)
+            result["path"] = p
+            results.append(result)
+        done = sum(1 for r in results if r["ok"])
+        return json.dumps({"results": results, "done": done, "failed": len(results) - done})
+
+    # -- rangement (onglet "Ranger vos documents") -----------------------------
+    def organize_suggestions(self, scheme="type"):
+        suggestions = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            parent = Path(entry.path).parent
+            folder = CATEGORY_LABELS.get(entry.category, "Autres fichiers")
+            new_name = _suggested_document_name(entry) if entry.badly_named and entry.category in ("pdf", "documents") else entry.name
+            year, month_folder = _date_parts(entry.mtime)
+            if scheme == "date":
+                target = parent / "Retrio - Classé" / year / month_folder / new_name
+            elif scheme == "type_date":
+                target = parent / "Retrio - Classé" / folder / year / new_name
+            else:
+                target = parent / "Retrio - Classé" / folder / new_name
+            if os.path.normcase(str(target)) == os.path.normcase(entry.path):
+                continue
+            suggestions.append({
+                "path": entry.path, "name": entry.name, "target": str(target),
+                "new_name": new_name, "folder": folder, "category": entry.category,
+                "size": entry.size, "size_human": human_size(entry.size), "mtime": entry.mtime,
+                "reason": "Nom peu explicite" if entry.badly_named else "Classement par type",
+            })
+        return json.dumps({
+            "suggestions": suggestions[:500], "count": len(suggestions),
+            "scheme": scheme, "free_limit": RANGER_FREE_LIMIT,
+        })
+
+    def _apply_single_organization(self, path, target):
+        try:
+            source = Path(str(path)).resolve(strict=True)
+            requested = Path(str(target)).resolve(strict=False)
+            known = next((e for e in self.scan_result.entries if os.path.normcase(e.path) == os.path.normcase(str(source))), None)
+            if known is None or not source.is_file():
+                return {"ok": False, "path": str(path), "error": "Ce fichier ne fait pas partie de la dernière analyse."}
+            requested.parent.mkdir(parents=True, exist_ok=True)
+            destination = _safe_target(requested)
+            shutil.move(str(source), str(destination))
+            known.path, known.name, known.stem = str(destination), destination.name, destination.stem
+            return {"ok": True, "path": str(destination), "source": str(source)}
+        except Exception as exc:
+            return {"ok": False, "path": str(path), "error": f"Déplacement impossible : {type(exc).__name__}"}
+
+    def apply_organization(self, path, target):
+        result = self._apply_single_organization(path, target)
+        return {"ok": result["ok"], "path": result.get("path", ""), "error": result.get("error", "")}
+
+    def apply_organization_bulk(self, items_json):
+        try:
+            items = json.loads(items_json) if isinstance(items_json, str) else (items_json or [])
+        except (TypeError, ValueError):
+            return json.dumps({"results": [], "done": 0, "failed": 0})
+        results = []
+        for item in items:
+            item_path = item.get("path") if isinstance(item, dict) else None
+            item_target = item.get("target") if isinstance(item, dict) else None
+            if not item_path or not item_target:
+                results.append({"ok": False, "path": item_path or "", "error": "Fichier invalide"})
+                continue
+            results.append(self._apply_single_organization(item_path, item_target))
+        done = sum(1 for r in results if r["ok"])
+        return json.dumps({"results": results, "done": done, "failed": len(results) - done})
 
 
 def resource_path(*parts):
