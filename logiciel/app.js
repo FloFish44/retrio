@@ -9,7 +9,7 @@ const state = {
   scanning: false,
   ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
   doublons: { groups: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
-  nettoyage: { items: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
+  nettoyage: { items: [], freeLimit: 0, totalRecoverable: "", selected: new Set(), healthScore: null, healthLabel: "", counts: {} },
 };
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -96,10 +96,12 @@ const LOCKED_TABS = {
     ],
   },
   nettoyage: {
-    title: "Le nettoyage sera disponible plus tard.",
+    title: "Un nettoyage plus profond qu'un simple vide-cache.",
     bullets: [
-      "Fichiers temporaires et caches oubliés",
-      "Doublons volumineux repérés",
+      "Quasi-doublons repérés par le contenu des documents (pas juste le nom)",
+      "Téléchargements oubliés depuis des mois",
+      "Photos en rafale regroupées automatiquement",
+      "Score de santé de votre PC à chaque analyse",
       "Rien n'est supprimé sans accord",
     ],
   },
@@ -413,6 +415,15 @@ async function applyDoublonsBulk(el) {
 }
 
 // -------------------- Nettoyage (bêta fonctionnelle) --------------------
+const NETTOYAGE_KIND_LABELS = {
+  junk: "Fichiers temporaires & caches",
+  old_large: "Gros fichiers anciens",
+  near_duplicate: "Quasi-doublons (analyse de contenu)",
+  forgotten_download: "Téléchargements oubliés",
+  burst_photo: "Photos en rafale",
+};
+const NETTOYAGE_KIND_ORDER = ["near_duplicate", "burst_photo", "forgotten_download", "old_large", "junk"];
+
 async function renderNettoyageTab(el) {
   if (!state.hasScanned) {
     el.className = "tab-content";
@@ -421,7 +432,7 @@ async function renderNettoyageTab(el) {
     return;
   }
   el.className = "tab-content ranger-tab";
-  el.innerHTML = `<div class="ranger-loading">Recherche des fichiers à nettoyer…</div>`;
+  el.innerHTML = `<div class="ranger-loading">Analyse approfondie en cours (contenu, doublons, photos)…</div>`;
   await loadNettoyageSuggestions(el);
 }
 
@@ -430,19 +441,29 @@ async function loadNettoyageSuggestions(el) {
   state.nettoyage.items = data.items;
   state.nettoyage.freeLimit = data.free_limit;
   state.nettoyage.totalRecoverable = data.total_recoverable_human;
+  state.nettoyage.healthScore = data.health_score;
+  state.nettoyage.healthLabel = data.health_label;
+  state.nettoyage.counts = data.counts;
   state.nettoyage.selected = new Set();
   renderNettoyageList(el);
 }
 
 function renderNettoyageList(el) {
-  const { items, freeLimit, totalRecoverable, selected } = state.nettoyage;
+  const { items, freeLimit, totalRecoverable, selected, healthScore, healthLabel, counts } = state.nettoyage;
 
   el.innerHTML = `
     <div class="tool-head">
       <div>
         <div class="pro-eyebrow">NETTOYAGE · BÊTA</div>
-        <h2>${items.length} fichier(s) à nettoyer</h2>
-        <p>${items.length ? `Espace récupérable estimé : ${escapeHtml(totalRecoverable)}. Fichiers temporaires, caches oubliés et gros fichiers anciens.` : "Rien à nettoyer pour le moment."}</p>
+        <h2>Nettoyage profond</h2>
+        <p>${items.length ? `${items.length} fichier(s) repérés · espace récupérable estimé : ${escapeHtml(totalRecoverable)}.` : "Rien à signaler pour le moment : votre PC est propre."}</p>
+      </div>
+    </div>
+    <div class="health-banner">
+      <div class="health-score-circle">${healthScore ?? "–"}</div>
+      <div class="health-banner-body">
+        <strong>Score de santé : ${escapeHtml(healthLabel || "")}</strong>
+        <small>Basé sur les fichiers temporaires, quasi-doublons, téléchargements oubliés et photos en rafale détectés dans votre dernière analyse.</small>
       </div>
     </div>
     <div class="ranger-bulk-row">
@@ -450,27 +471,48 @@ function renderNettoyageList(el) {
       <span class="ranger-selected-count" id="nettoyageSelectedCount">${selected.size} sélectionné(s)</span>
       <button class="btn btn-primary" id="nettoyageBulkValidate" disabled>Supprimer la sélection (corbeille)</button>
     </div>
-    <div class="tool-list" id="nettoyageList"></div>
+    <div id="nettoyageSections"></div>
   `;
 
-  const listEl = document.getElementById("nettoyageList");
+  const sectionsEl = document.getElementById("nettoyageSections");
   if (!items.length) {
-    listEl.innerHTML = '<div class="tool-empty">Aucun fichier temporaire ou ancien détecté.</div>';
+    sectionsEl.innerHTML = '<div class="tool-empty">Aucun fichier temporaire, quasi-doublon ou oublié détecté.</div>';
   } else {
     const actionable = items.slice(0, freeLimit);
     const locked = items.slice(freeLimit);
-    actionable.forEach((item) => listEl.appendChild(buildNettoyageCard(item)));
+    const byKind = {};
+    actionable.forEach((item) => { (byKind[item.kind] = byKind[item.kind] || []).push(item); });
+
+    NETTOYAGE_KIND_ORDER.filter((kind) => byKind[kind]?.length).forEach((kind) => {
+      const section = document.createElement("div");
+      section.innerHTML = `<div class="nettoyage-section-title">${escapeHtml(NETTOYAGE_KIND_LABELS[kind])} (${counts?.[kind] ?? byKind[kind].length})</div>`;
+      const list = document.createElement("div");
+      list.className = "tool-list";
+      byKind[kind].forEach((item) => list.appendChild(buildNettoyageCard(item)));
+      section.appendChild(list);
+      sectionsEl.appendChild(section);
+    });
+
     if (locked.length) {
       const upsell = document.createElement("article");
-      upsell.className = "tool-card ranger-upsell";
-      upsell.innerHTML = `<strong>+${locked.length} autre(s) fichier(s) à nettoyer</strong><p>Passez à Retrio Pro pour nettoyer tous vos fichiers en un clic, sans limite.</p><button class="btn btn-pro">Découvrir Retrio Pro</button>`;
-      listEl.appendChild(upsell);
+      upsell.className = "tool-card ranger-upsell nettoyage-upsell";
+      upsell.innerHTML = `
+        <strong>+${locked.length} élément(s) supplémentaire(s) détecté(s)</strong>
+        <p>Retrio Pro va plus loin qu'un simple nettoyeur de cache :</p>
+        <ul>
+          <li>Quasi-doublons repérés par le <strong>contenu</strong> des documents, pas juste leur nom</li>
+          <li>Téléchargements oubliés depuis des mois</li>
+          <li>Photos en rafale regroupées automatiquement</li>
+          <li>Score de santé complet, mis à jour à chaque analyse</li>
+        </ul>
+        <button class="btn btn-pro">Découvrir Retrio Pro</button>`;
+      sectionsEl.appendChild(upsell);
     }
   }
 
   const selectAll = document.getElementById("nettoyageSelectAll");
   selectAll.onchange = () => {
-    listEl.querySelectorAll(".ranger-check").forEach((cb) => {
+    sectionsEl.querySelectorAll(".ranger-check").forEach((cb) => {
       cb.checked = selectAll.checked;
       toggleNettoyageSelection(cb.dataset.path, selectAll.checked);
     });

@@ -821,9 +821,12 @@ class Api:
         return True
 
     # -- nettoyage (onglet "Nettoyage") ----------------------------------------
-    def cleanup_suggestions(self):
-        import time as _time
-        now = _time.time()
+    #
+    # Ce que ne font pas les nettoyeurs génériques (CCleaner et consorts) :
+    # Retrio a déjà lu le CONTENU des documents pour la recherche, donc il
+    # peut repérer des quasi-doublons (même facture enregistrée deux fois
+    # sous des noms différents) que les outils "par octet" ne voient jamais.
+    def _cleanup_junk_and_old(self, now):
         junk_ext = {".tmp", ".temp", ".bak", ".old", ".log", ".cache", ".crdownload",
                     ".part", ".ds_store", ".swp"}
         junk_names = {"thumbs.db", "desktop.ini", ".ds_store"}
@@ -844,11 +847,124 @@ class Api:
                 "size": entry.size, "size_human": human_size(entry.size),
                 "reason": reason, "kind": "junk" if is_junk else "old_large",
             })
+        return items
+
+    def _cleanup_near_duplicates(self):
+        candidates = [e for e in self.scan_result.entries
+                      if e.category in ("documents", "pdf") and len(e.content_lower or "") > 200
+                      and os.path.isfile(e.path)]
+        candidates.sort(key=lambda e: e.size)
+        items = []
+        seen = set()
+        limit = 260  # borne le nombre de comparaisons (coût O(n²))
+        for i, a in enumerate(candidates[:limit]):
+            if a.path in seen:
+                continue
+            for b in candidates[i + 1:limit]:
+                if b.path in seen:
+                    continue
+                if a.size and b.size and (max(a.size, b.size) / max(1, min(a.size, b.size))) > 1.6:
+                    continue
+                ratio = difflib.SequenceMatcher(None, a.content_lower, b.content_lower).quick_ratio()
+                if 0.82 <= ratio < 0.995:
+                    worse = a if (a.size <= b.size) else b
+                    keep = b if worse is a else a
+                    items.append({
+                        "path": worse.path, "name": worse.name, "dir": os.path.dirname(worse.path),
+                        "size": worse.size, "size_human": human_size(worse.size),
+                        "reason": f"Quasi-doublon de « {keep.name} » (contenu {int(ratio * 100)}% similaire)",
+                        "kind": "near_duplicate",
+                    })
+                    seen.add(worse.path)
+                    break
+        return items
+
+    def _cleanup_forgotten_downloads(self, now):
+        items = []
+        for entry in self.scan_result.entries:
+            if not os.path.isfile(entry.path):
+                continue
+            parent_lower = os.path.dirname(entry.path).lower()
+            if "téléchargement" not in parent_lower and "telechargement" not in parent_lower and "download" not in parent_lower:
+                continue
+            age_days = (now - entry.mtime) / 86400 if entry.mtime else 0
+            if age_days < 60:
+                continue
+            items.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": f"Dans Téléchargements depuis {int(age_days)} jours, jamais déplacé",
+                "kind": "forgotten_download",
+            })
+        return items
+
+    def _cleanup_burst_photos(self):
+        photos = [e for e in self.scan_result.entries
+                  if e.category == "images" and os.path.isfile(e.path) and e.mtime]
+        by_dir = defaultdict(list)
+        for entry in photos:
+            by_dir[os.path.dirname(entry.path)].append(entry)
+        items = []
+        for _, entries in by_dir.items():
+            entries.sort(key=lambda e: e.mtime)
+            cluster = [entries[0]] if entries else []
+            for entry in entries[1:]:
+                if entry.mtime - cluster[-1].mtime <= 30:
+                    cluster.append(entry)
+                else:
+                    if len(cluster) >= 3:
+                        items.extend(self._burst_cluster_items(cluster))
+                    cluster = [entry]
+            if len(cluster) >= 3:
+                items.extend(self._burst_cluster_items(cluster))
+        return items
+
+    @staticmethod
+    def _burst_cluster_items(cluster):
+        best = max(cluster, key=lambda e: e.size)
+        out = []
+        for entry in cluster:
+            if entry.path == best.path:
+                continue
+            out.append({
+                "path": entry.path, "name": entry.name, "dir": os.path.dirname(entry.path),
+                "size": entry.size, "size_human": human_size(entry.size),
+                "reason": f"Photo en rafale, proche de « {best.name} » ({len(cluster)} photos prises à quelques secondes d'écart)",
+                "kind": "burst_photo",
+            })
+        return out
+
+    def cleanup_suggestions(self):
+        import time as _time
+        now = _time.time()
+        items = []
+        items += self._cleanup_junk_and_old(now)
+        items += self._cleanup_near_duplicates()
+        items += self._cleanup_forgotten_downloads(now)
+        items += self._cleanup_burst_photos()
         items.sort(key=lambda i: i["size"], reverse=True)
         total = sum(i["size"] for i in items)
+
+        total_files = max(1, len(self.scan_result.entries))
+        ratio_issues = len(items) / total_files
+        health_score = max(15, round(100 - min(80, ratio_issues * 400)))
+        if health_score >= 90:
+            health_label = "Excellent"
+        elif health_score >= 70:
+            health_label = "Bon"
+        elif health_score >= 50:
+            health_label = "Moyen"
+        else:
+            health_label = "À nettoyer"
+
+        counts = {"junk": 0, "old_large": 0, "near_duplicate": 0, "forgotten_download": 0, "burst_photo": 0}
+        for item in items:
+            counts[item["kind"]] = counts.get(item["kind"], 0) + 1
+
         return json.dumps({
-            "items": items[:300], "count": len(items),
+            "items": items[:400], "count": len(items),
             "free_limit": NETTOYAGE_FREE_LIMIT, "total_recoverable_human": human_size(total),
+            "health_score": health_score, "health_label": health_label, "counts": counts,
         })
 
     # -- doublons (onglet "Doublons") ---------------------------------------

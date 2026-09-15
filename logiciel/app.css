@@ -316,6 +316,14 @@ button { font-family: inherit; cursor: pointer; }
 .doublons-file-body small { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doublons-status { font-size: 11.5px; color: var(--text-tertiary); }
 
+.health-banner { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 14px; background: linear-gradient(135deg, rgba(46,125,79,0.10) 0%, rgba(182,138,49,0.10) 100%); border: 1px solid var(--border-btn); margin: 14px 0 18px; }
+.health-score-circle { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #F5F1E6; background: var(--primary); flex-shrink: 0; }
+.health-banner-body strong { display: block; font-size: 13.5px; margin-bottom: 3px; }
+.health-banner-body small { color: var(--text-tertiary); font-size: 11px; line-height: 1.4; }
+.nettoyage-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-tertiary); font-weight: 700; margin: 18px 0 8px; }
+.nettoyage-upsell ul { text-align: left; margin: 8px 0 14px; padding-left: 18px; font-size: 11.5px; color: #CFE0D3; line-height: 1.6; }
+.nettoyage-upsell p { margin: 4px 0; }
+
 /* scrollbar */
 .main::-webkit-scrollbar { width: 10px; }
 .main::-webkit-scrollbar-thumb { background: var(--border-btn); border-radius: 999px; }
