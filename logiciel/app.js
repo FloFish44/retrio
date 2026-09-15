@@ -33,6 +33,22 @@ async function init() {
   demoDialogDoublons.addEventListener('close', () => demoVideoDoublons.pause());
   document.getElementById('minBtn').onclick = () => api().minimize();
   document.getElementById('maxBtn').onclick = () => api().toggle_maximize();
+  const dragRegion = document.querySelector('.pywebview-drag-region');
+  if (dragRegion) {
+    dragRegion.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      api().begin_move();
+    });
+    dragRegion.addEventListener('dblclick', () => api().toggle_maximize());
+  }
+  document.querySelectorAll('.resize-handle').forEach((handle) => {
+    handle.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      api().begin_resize(handle.dataset.edge);
+    });
+  });
   document.getElementById('closeBtn').onclick = () => api().close_window();
   document.getElementById('folderScope').onchange = () => runSearch(document.getElementById('searchInput').value);
   document.getElementById('yesBtn').onclick = () => document.getElementById('feedbackText').textContent = 'Parfait, vous pouvez ouvrir votre fichier.';

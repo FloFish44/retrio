@@ -750,6 +750,39 @@ class Api:
         self._stop.set()
         self.window.destroy()
 
+    # -- deplacement/redimensionnement natifs (fenetre sans bordure) -------
+    _RESIZE_EDGES = {"w": 1, "e": 2, "n": 3, "nw": 4, "ne": 5, "s": 6, "sw": 7, "se": 8}
+
+    def _hwnd(self):
+        if sys.platform != 'win32':
+            return None
+        try:
+            hwnd = ctypes.windll.user32.FindWindowW(None, APP_NAME)
+            return hwnd or None
+        except Exception:
+            return None
+
+    def begin_move(self):
+        hwnd = self._hwnd()
+        if not hwnd:
+            return
+        try:
+            ctypes.windll.user32.ReleaseCapture()
+            ctypes.windll.user32.SendMessageW(hwnd, 0x0112, 0xF010, 0)  # WM_SYSCOMMAND, SC_MOVE
+        except Exception:
+            pass
+
+    def begin_resize(self, edge):
+        direction = self._RESIZE_EDGES.get(edge)
+        hwnd = self._hwnd()
+        if not hwnd or not direction:
+            return
+        try:
+            ctypes.windll.user32.ReleaseCapture()
+            ctypes.windll.user32.SendMessageW(hwnd, 0x0112, 0xF000 + direction, 0)  # WM_SYSCOMMAND, SC_SIZE
+        except Exception:
+            pass
+
     def search(self, query, type_filter, folder=""):
         self.type_filter = type_filter or "tous"
         pool = self._filtered(self.scan_result.entries, self.type_filter)
