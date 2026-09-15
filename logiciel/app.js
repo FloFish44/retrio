@@ -27,6 +27,9 @@ async function init() {
   const demoVideo = document.getElementById('demoVideo');
   document.getElementById('demoBtn').onclick = () => { demoDialog.showModal(); demoVideo.currentTime = 0; demoVideo.play().catch(() => {}); };
   demoDialog.addEventListener('close', () => demoVideo.pause());
+  const demoDialogDoublons = document.getElementById('demoDialogDoublons');
+  const demoVideoDoublons = document.getElementById('demoVideoDoublons');
+  demoDialogDoublons.addEventListener('close', () => demoVideoDoublons.pause());
   document.getElementById('minBtn').onclick = () => api().minimize();
   document.getElementById('maxBtn').onclick = () => api().toggle_maximize();
   document.getElementById('closeBtn').onclick = () => api().close_window();
@@ -315,6 +318,7 @@ function renderDoublonsList(el) {
         <h2>${groups.length} groupe(s) de doublons détecté(s)</h2>
         <p>${groups.length ? `Espace récupérable estimé : ${escapeHtml(totalRecoverable)}.` : "Aucun doublon exact trouvé dans la dernière analyse."}</p>
       </div>
+      <button class="btn-mini" id="doublonsDemoBtn">Voir la démo</button>
     </div>
     <div class="ranger-bulk-row">
       <span class="ranger-selected-count" id="doublonsSelectedCount">0 fichier(s) sélectionné(s)</span>
@@ -339,6 +343,13 @@ function renderDoublonsList(el) {
   }
 
   document.getElementById("doublonsBulkValidate").onclick = () => applyDoublonsBulk(el);
+  document.getElementById("doublonsDemoBtn").onclick = () => {
+    const dlg = document.getElementById("demoDialogDoublons");
+    const vid = document.getElementById("demoVideoDoublons");
+    dlg.showModal();
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+  };
   updateDoublonsBulkUI();
 }
 
