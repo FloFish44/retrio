@@ -63,10 +63,70 @@ async function init() {
   bindFilters();
   bindAddFolder();
   bindAnalyze();
+  bindPremium();
 
   const folders = await api().get_known_folders();
   state.knownFolders = folders;
   renderFolderChecks();
+
+  try {
+    applyLicenseState(JSON.parse(await api().get_license_state()));
+  } catch (e) {}
+  api().refresh_license().then((raw) => {
+    try { applyLicenseState(JSON.parse(raw)); } catch (e) {}
+  }).catch(() => {});
+}
+
+// -------------------- Retrio Pro (licence / abonnement) --------------------
+let licenseState = { email: "", premium: false, status: "none" };
+
+function bindPremium() {
+  const dialog = document.getElementById("proDialog");
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-pro");
+    if (!btn) return;
+    e.preventDefault();
+    const emailInput = document.getElementById("proEmailInput");
+    if (emailInput && licenseState.email) emailInput.value = licenseState.email;
+    dialog.showModal();
+  });
+  document.getElementById("proSubscribeBtn").onclick = () => api().open_premium_checkout();
+  document.getElementById("proVerifyBtn").onclick = async () => {
+    const emailInput = document.getElementById("proEmailInput");
+    const statusMsg = document.getElementById("proStatusMsg");
+    const email = (emailInput.value || "").trim();
+    if (!email) { statusMsg.textContent = "Indiquez l'email utilisé lors du paiement."; return; }
+    statusMsg.textContent = "Vérification en cours…";
+    try {
+      const raw = await api().set_license_email(email);
+      const data = JSON.parse(raw);
+      applyLicenseState(data);
+      statusMsg.textContent = data.premium
+        ? "Abonnement Retrio Pro actif — merci !"
+        : "Aucun abonnement actif trouvé pour cet email.";
+    } catch (e) {
+      statusMsg.textContent = "Impossible de vérifier pour le moment (hors ligne ?).";
+    }
+  };
+}
+
+function applyLicenseState(data) {
+  if (!data) return;
+  licenseState = data;
+  const title = document.getElementById("proCardTitle");
+  const sub = document.getElementById("proCardSub");
+  const discoverBtn = document.getElementById("proDiscoverBtn");
+  const activeMsg = document.getElementById("proActiveMsg");
+  const emailInput = document.getElementById("proEmailInput");
+  if (emailInput && data.email && !emailInput.value) emailInput.value = data.email;
+  if (!title || !sub || !discoverBtn || !activeMsg) return;
+  if (data.premium) {
+    title.hidden = true; sub.hidden = true; discoverBtn.hidden = true;
+    activeMsg.hidden = false;
+  } else {
+    title.hidden = false; sub.hidden = false; discoverBtn.hidden = false;
+    activeMsg.hidden = true;
+  }
 }
 
 // -------------------- Navigation --------------------

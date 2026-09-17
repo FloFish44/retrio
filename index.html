@@ -24,7 +24,9 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Retrio","url":"https://retrio.eu/","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","description":"Logiciel de recherche locale qui retrouve des documents et des photos à partir de quelques mots, même lorsque leur nom est incompréhensible.","softwareVersion":"0.5.1 beta"},{"@type":"Organization","name":"Retrio","url":"https://retrio.eu/","email":"retrio.pro@gmail.com"},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Je n'arrive pas à télécharger Retrio.","acceptedAnswer":{"@type":"Answer","text":"Vérifiez que votre antivirus ou votre navigateur n'a pas bloqué le fichier téléchargé. Si le problème persiste, contactez l'assistance Retrio."}},{"@type":"Question","name":"Retrio ne trouve pas un de mes fichiers.","acceptedAnswer":{"@type":"Answer","text":"Vérifiez que le dossier contenant ce fichier a été sélectionné, puis relancez l'analyse."}},{"@type":"Question","name":"Mes fichiers sont-ils envoyés sur Internet ?","acceptedAnswer":{"@type":"Answer","text":"Non. L'analyse, l'index et la recherche fonctionnent localement sur votre ordinateur."}}]}]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" /></noscript>
 <style>
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -45,7 +47,7 @@
   .video-modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(14,27,20,.72);padding:22px;align-items:center;justify-content:center}
   .video-modal.open{display:flex}
   .video-dialog{width:min(960px,100%);background:#FBF8F0;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.4);overflow:hidden}
-  .demo-video{display:block;width:100%;aspect-ratio:16/9;background:#0E1B14;object-fit:contain}
+  .demo-video{display:block;width:100%;aspect-ratio:16/9;background:#0E1B14;object-fit:contain}.demo-video:fullscreen{width:100vw;height:100vh;object-fit:cover;aspect-ratio:auto}.demo-video:-webkit-full-screen{width:100vw;height:100vh;object-fit:cover;aspect-ratio:auto}
   .demo-cta{border:0;background:linear-gradient(135deg,#D9C185,#F1D98F);color:#14251C;border-radius:999px;padding:14px 22px;font-weight:800;cursor:pointer;font-size:.92rem;box-shadow:0 12px 28px rgba(100,77,24,.24);transition:transform .2s,box-shadow .2s}
   .demo-cta:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(100,77,24,.32)}
   .site-guides{position:relative}
@@ -106,6 +108,7 @@
         </div>
       </details>
       <a href="#confidentialite" style="color:#3C4A40;font-size:.92rem;font-weight:600">Confidentialité</a>
+      <a href="./retrio-pro.html" style="color:#896119;font-size:.92rem;font-weight:700">Retrio Pro</a>
       <a class="btn" href="./telecharger.html" style="color:#F5F1E6;background:#1B4332;padding:10px 20px;font-size:.9rem" onmouseover="this.style.background='#2F6B4A'" onmouseout="this.style.background='#1B4332'">Télécharger</a>
     </nav>
   </div>
@@ -146,7 +149,7 @@
           <span style="margin-left:8px;color:#F5F1E6;font-weight:600;font-size:.84rem">Retrio</span>
           <span style="background:rgba(149,213,178,.18);color:#95D5B2;padding:3px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-left:auto">Le vrai logiciel</span>
         </div>
-        <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant" style="display:block;width:100%;height:auto" />
+        <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant" width="1600" height="1011" style="display:block;width:100%;height:auto" />
       </div>
       <div style="margin-top:14px;color:#4C5A50;font-size:.85rem"><span style="color:#2F6B4A;font-weight:600">Voir d'autres captures ↓</span></div>
     </a>
@@ -231,7 +234,7 @@
             <strong id="modal-filename" style="font-size:1rem;color:#F5F1E6;font-family:'IBM Plex Mono',monospace"></strong>
           </div>
           <div id="modal-photo" style="display:none;padding:clamp(16px,2.5vw,28px);justify-content:center;align-items:center;height:calc(100% - 56px)">
-            <img src="./assets/espagne-2012.png" alt="Photo Espagne 2012" style="max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 8px 24px rgba(15,22,32,.2);object-fit:contain" />
+            <img src="./assets/espagne-2012.jpg" alt="Photo Espagne 2012" loading="lazy" decoding="async" width="1448" height="1086" style="max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 8px 24px rgba(15,22,32,.2);object-fit:contain" />
           </div>
           <div id="modal-invoice" style="display:none;padding:clamp(20px,3vw,34px);justify-content:center">
             <div style="background:#fff;border-radius:10px;padding:32px 30px;box-shadow:0 8px 24px rgba(15,22,32,.10);color:#2C2C2C;max-width:460px;width:100%">
@@ -274,7 +277,7 @@
         <span style="margin-left:8px;color:#F5F1E6;font-weight:600;font-size:.84rem">Retrio</span>
         <span style="background:rgba(217,193,133,.2);color:#D9C185;padding:3px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-left:auto">1 · L'analyse</span>
       </div>
-      <img src="./assets/screenshot-bilan.jpg" alt="Bilan de l'analyse Retrio : 1284 fichiers analysés, 340 PDF, 610 photos, 2,3 Go" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
+      <img src="./assets/screenshot-bilan.jpg" alt="Bilan de l'analyse Retrio : 1284 fichiers analysés, 340 PDF, 610 photos, 2,3 Go" width="1600" height="1011" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
     </div>
     <div style="background:#14251C;border-radius:18px;overflow:hidden;box-shadow:0 24px 54px rgba(20,37,28,.20)">
       <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:#0E1B14">
@@ -282,7 +285,7 @@
         <span style="margin-left:8px;color:#F5F1E6;font-weight:600;font-size:.84rem">Retrio</span>
         <span style="background:rgba(149,213,178,.18);color:#95D5B2;padding:3px 9px;border-radius:999px;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-left:auto">2 · Le résultat</span>
       </div>
-      <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant en meilleure correspondance" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
+      <img src="./assets/screenshot-recherche.jpg" alt="Recherche « facture edf » dans Retrio : le bon fichier trouvé et mis en avant en meilleure correspondance" width="1600" height="1011" style="display:block;width:100%;height:auto;cursor:zoom-in" loading="lazy" onclick="openImgLightbox(this.src,this.alt)" />
     </div>
   </div>
 </section>

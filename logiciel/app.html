@@ -11,6 +11,7 @@
 <dialog id="demoDialog"><h2>Retrouvez vos fichiers en 4 étapes</h2><p>1. Choisissez vos dossiers.<br>2. Lancez l’analyse locale.<br>3. Consultez le bilan.<br>4. Décrivez ce que vous cherchez.</p><video id="demoVideo" class="demo-video" controls preload="metadata" playsinline><source src="demo-retrio.mp4" type="video/mp4">Votre ordinateur ne peut pas lire cette vidéo.</video><form method="dialog"><button class="btn btn-primary">J’ai compris</button></form></dialog>
 <dialog id="demoDialogDoublons"><h2>Nettoyer vos doublons en 3 étapes</h2><p>1. Retrio repère les fichiers strictement identiques.<br>2. Vous choisissez quelle copie garder.<br>3. Les autres partent à la corbeille en un clic.</p><video id="demoVideoDoublons" class="demo-video" controls preload="metadata" playsinline><source src="demo-doublons.mp4" type="video/mp4">Votre ordinateur ne peut pas lire cette vidéo.</video><form method="dialog"><button class="btn btn-primary">J’ai compris</button></form></dialog>
 
+<dialog id="proDialog"><h2>Passer à Retrio Pro</h2><p>Débloquez toutes les fonctions avancées, sans limite :</p><ul class="pro-benefits"><li>Renommage intelligent en masse (date, fournisseur, contenu…)</li><li>Classement automatique dans l'arborescence de votre choix</li><li>Détection et nettoyage des doublons, sans limite</li><li>Alertes d'échéances : garanties, abonnements, devis</li><li>Filtres et recherches avancées</li></ul><div class="pro-price">4,99 € / mois — résiliable à tout moment</div><button class="btn btn-primary" id="proSubscribeBtn">S'abonner — 4,99 €/mois</button><div class="pro-divider">Déjà abonné ?</div><div class="pro-email-row"><input type="email" id="proEmailInput" placeholder="L'email utilisé lors du paiement" /><button class="btn btn-outline" id="proVerifyBtn">Vérifier mon abonnement</button></div><div class="pro-status-msg" id="proStatusMsg"></div><form method="dialog"><button class="btn btn-outline">Fermer</button></form></dialog>
 <div class="app">
 
   <!-- ============ SIDEBAR ============ -->
@@ -63,10 +64,11 @@
         </div>
       </div>
 
-      <div class="pro-card">
-        <div class="pro-title">Passer à Retrio Pro</div>
-        <div class="pro-sub">Doublons, rangement automatique et plus encore.</div>
-        <button class="btn btn-pro">Découvrir</button>
+      <div class="pro-card" id="proCard">
+        <div class="pro-title" id="proCardTitle">Passer à Retrio Pro</div>
+        <div class="pro-sub" id="proCardSub">Doublons, rangement automatique et plus encore.</div>
+        <button class="btn btn-pro" id="proDiscoverBtn">Découvrir</button>
+        <div class="pro-active" id="proActiveMsg" hidden>Retrio Pro actif — merci !</div>
       </div>
     </div>
   </aside>

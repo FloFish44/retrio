@@ -31,6 +31,9 @@ import sys
 import subprocess
 import shutil
 import threading
+import urllib.parse
+import urllib.request
+import webbrowser
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import defaultdict
@@ -620,6 +623,21 @@ def file_badge(entry) -> tuple:
 RANGER_FREE_LIMIT = 30
 DOUBLONS_FREE_LIMIT = 10
 NETTOYAGE_FREE_LIMIT = 10
+PREMIUM_UNLIMITED = 10**9
+
+# -- licence Retrio Pro (Stripe + service de licence Cloudflare) ------------
+LICENSE_API_BASE = "https://retrio-license.retrio-pro.workers.dev"
+PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/test_7sY4gB1IX2BUdVu2nd08g00"  # TODO: remplacer par le lien de PRODUCTION avant la mise en ligne
+
+
+def _license_config_path():
+    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    d = os.path.join(base, "Retrio")
+    try:
+        os.makedirs(d, exist_ok=True)
+    except Exception:
+        pass
+    return os.path.join(d, "license.json")
 
 
 def _file_digest(path: str, chunk_size: int = 1024 * 1024) -> str:
@@ -679,6 +697,7 @@ class Api:
         self._stop = threading.Event()
         self._scan_lock = threading.Lock()
         self._scanning = False
+        self._license_cache = self._load_license_cache()
 
     def _run_js(self, code):
         try:
@@ -782,6 +801,68 @@ class Api:
             ctypes.windll.user32.SendMessageW(hwnd, 0x0112, 0xF000 + direction, 0)  # WM_SYSCOMMAND, SC_SIZE
         except Exception:
             pass
+
+    # -- licence Retrio Pro --------------------------------------------------
+    def _load_license_cache(self):
+        try:
+            with open(_license_config_path(), "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception:
+            pass
+        return {"email": "", "premium": False, "status": "none", "updated_at": None}
+
+    def _save_license_cache(self):
+        try:
+            with open(_license_config_path(), "w", encoding="utf-8") as f:
+                json.dump(self._license_cache, f)
+        except Exception:
+            pass
+
+    def _is_premium(self):
+        return bool(self._license_cache.get("premium"))
+
+    def get_license_state(self):
+        """Retourne l'etat de licence en cache (aucun appel reseau : instantane)."""
+        return json.dumps(self._license_cache)
+
+    def set_license_email(self, email):
+        """Associe cet email a l'appareil puis verifie immediatement l'abonnement."""
+        self._license_cache["email"] = (email or "").strip().lower()
+        self._save_license_cache()
+        return self.refresh_license()
+
+    def refresh_license(self):
+        """Interroge le service de licence (Cloudflare) pour rafraichir le statut Premium.
+        Si hors ligne ou en erreur : on garde le dernier statut connu, l'appli reste
+        utilisable (fonctionnement 100% local pour la recherche elle-meme)."""
+        email = self._license_cache.get("email", "")
+        if not email:
+            self._license_cache.update({"premium": False, "status": "none"})
+            self._save_license_cache()
+            return json.dumps(self._license_cache)
+        try:
+            url = f"{LICENSE_API_BASE}/license/check?email={urllib.parse.quote(email)}"
+            req = urllib.request.Request(url, headers={"User-Agent": "Retrio/1.0"})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            self._license_cache.update({
+                "premium": bool(data.get("premium")),
+                "status": data.get("status", "none"),
+                "updated_at": datetime.now().isoformat(),
+            })
+            self._save_license_cache()
+        except Exception:
+            pass
+        return json.dumps(self._license_cache)
+
+    def open_premium_checkout(self):
+        try:
+            webbrowser.open(PREMIUM_CHECKOUT_URL)
+        except Exception:
+            pass
+        return True
 
     def search(self, query, type_filter, folder=""):
         self.type_filter = type_filter or "tous"
@@ -996,7 +1077,7 @@ class Api:
 
         return json.dumps({
             "items": items[:400], "count": len(items),
-            "free_limit": NETTOYAGE_FREE_LIMIT, "total_recoverable_human": human_size(total),
+            "free_limit": (PREMIUM_UNLIMITED if self._is_premium() else NETTOYAGE_FREE_LIMIT), "total_recoverable_human": human_size(total),
             "health_score": health_score, "health_label": health_label, "counts": counts,
         })
 
@@ -1029,7 +1110,7 @@ class Api:
         total_recoverable = sum(g["size"] * (len(g["files"]) - 1) for g in groups)
         return json.dumps({
             "groups": groups[:200], "count": len(groups),
-            "free_limit": DOUBLONS_FREE_LIMIT, "total_recoverable_human": human_size(total_recoverable),
+            "free_limit": (PREMIUM_UNLIMITED if self._is_premium() else DOUBLONS_FREE_LIMIT), "total_recoverable_human": human_size(total_recoverable),
         })
 
     def move_to_trash(self, path):
@@ -1100,7 +1181,7 @@ class Api:
             })
         return json.dumps({
             "suggestions": suggestions[:500], "count": len(suggestions),
-            "scheme": scheme, "free_limit": RANGER_FREE_LIMIT,
+            "scheme": scheme, "free_limit": (PREMIUM_UNLIMITED if self._is_premium() else RANGER_FREE_LIMIT),
         })
 
     def _apply_single_organization(self, path, target):
@@ -1172,6 +1253,7 @@ def main():
         background_color="#F5F1E6",
     )
     api.window = window
+    threading.Thread(target=api.refresh_license, daemon=True).start()
     if icon_path:
         webview.start(icon=icon_path)
     else:
