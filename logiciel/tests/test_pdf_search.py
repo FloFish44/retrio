@@ -12,7 +12,7 @@ from reportlab.lib.pdfencrypt import StandardEncryption
 from PIL import Image, ImageDraw, ImageFont
 from pdf_content import PdfService, read_pdf
 from retrio_web import scan_folders, FileEntry, search_entries, content_snippet
-from retrieval import evidence
+from retrieval import SearchIndex, evidence
 
 
 def pdf(path,texts,encrypt=None):
@@ -60,6 +60,15 @@ class PdfSearchTests(unittest.TestCase):
         self.assertEqual(search_entries([entry],'facturre edf'),[entry])
         self.assertEqual(search_entries([entry],'facture engie'),[])
         self.assertEqual(search_entries([entry],'electricite edf'),[entry])
+
+    def test_indexed_search_matches_linear_search(self):
+        entries=[
+            FileEntry('/temp/a.pdf','a.pdf','a','.pdf','pdf',50,False,content='Facture EDF Electricité',content_lower='facture edf electricité'),
+            FileEntry('/temp/b.pdf','b.pdf','b','.pdf','pdf',50,False,content='Facture ENGIE gaz',content_lower='facture engie gaz'),
+            FileEntry('/temp/c.txt','c.txt','c','.txt','documents',10,False,content='Contrat habitation',content_lower='contrat habitation'),
+        ]
+        for query in ('facture edf','facturre edf','contrat habitation','terme absent'):
+            self.assertEqual(search_entries(SearchIndex(entries),query),search_entries(entries,query))
 
     def test_overlapping_folders_are_counted_once(self):
         sub=self.documents/'nested';sub.mkdir();pdf(sub/'123.pdf',['Facture EDF montant total 196,67 EUR'])

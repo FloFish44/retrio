@@ -79,6 +79,7 @@ async function init() {
 
 // -------------------- Retrio Pro (licence / abonnement) --------------------
 let licenseState = { email: "", premium: false, status: "none" };
+let previewAsFree = false;
 
 function bindPremium() {
   const dialog = document.getElementById("proDialog");
@@ -91,6 +92,20 @@ function bindPremium() {
     dialog.showModal();
   });
   document.getElementById("proSubscribeBtn").onclick = () => api().open_premium_checkout();
+  const previewBtn = document.getElementById("proPreviewToggle");
+  if (previewBtn) {
+    previewBtn.onclick = () => {
+      previewAsFree = !previewAsFree;
+      refreshPreviewUI();
+    };
+  }
+  const exitPreviewBtn = document.getElementById("exitPreviewBtn");
+  if (exitPreviewBtn) {
+    exitPreviewBtn.onclick = () => {
+      previewAsFree = false;
+      refreshPreviewUI();
+    };
+  }
   document.getElementById("proVerifyBtn").onclick = async () => {
     const emailInput = document.getElementById("proEmailInput");
     const statusMsg = document.getElementById("proStatusMsg");
@@ -113,6 +128,7 @@ function bindPremium() {
 function applyLicenseState(data) {
   if (!data) return;
   licenseState = data;
+  if (!data.premium) previewAsFree = false;
   const title = document.getElementById("proCardTitle");
   const sub = document.getElementById("proCardSub");
   const discoverBtn = document.getElementById("proDiscoverBtn");
@@ -127,6 +143,29 @@ function applyLicenseState(data) {
     title.hidden = false; sub.hidden = false; discoverBtn.hidden = false;
     activeMsg.hidden = true;
   }
+  refreshPreviewUI();
+}
+
+function isEffectivePremium() {
+  return licenseState.premium && !previewAsFree;
+}
+
+function refreshPreviewUI() {
+  const previewBtn = document.getElementById("proPreviewToggle");
+  const banner = document.getElementById("previewBanner");
+  const activeMsg = document.getElementById("proActiveMsg");
+  if (previewBtn) {
+    previewBtn.hidden = !licenseState.premium;
+    previewBtn.textContent = previewAsFree ? "Revenir en mode Pro" : "Aperçu mode visiteur";
+  }
+  if (banner) banner.hidden = !previewAsFree;
+  if (activeMsg) activeMsg.hidden = !licenseState.premium || previewAsFree;
+  const activeBtn = document.querySelector('.nav-item.active');
+  const activeTab = activeBtn && activeBtn.dataset.tab;
+  const toolMap = { ranger: 'tabRanger', doublons: 'tabDoublons', nettoyage: 'tabNettoyage' };
+  if (activeTab && toolMap[activeTab]) {
+    renderToolTab(activeTab, document.getElementById(toolMap[activeTab]));
+  }
 }
 
 // -------------------- Navigation --------------------
@@ -140,15 +179,10 @@ function bindNav() {
       const map = { recherche: "tabRecherche", doublons: "tabDoublons", ranger: "tabRanger", nettoyage: "tabNettoyage" };
       const el = document.getElementById(map[tab]);
       el.hidden = false;
-      if (tab === "ranger") {
-        renderRangerTab(el);
-      } else if (tab === "doublons") {
-        renderDoublonsTab(el);
-      } else if (tab === "nettoyage") {
-        renderNettoyageTab(el);
-      } else if (tab !== "recherche" && !el.dataset.built) {
-        buildLockedTab(tab, el);
-        el.dataset.built = "1";
+      const core = document.getElementById("rechercheCore");
+      if (core) core.hidden = tab !== "recherche";
+      if (tab === "ranger" || tab === "doublons" || tab === "nettoyage") {
+        renderToolTab(tab, el);
       }
     });
   });
@@ -156,40 +190,99 @@ function bindNav() {
 
 const LOCKED_TABS = {
   doublons: {
-    title: "Libérez de l'espace en un clic.",
+    eyebrow: "Retrio Pro",
+    title: "Récupérez de l'espace disque en un clic.",
+    subtitle:
+      "Retrio repère les fichiers strictement identiques sur votre ordinateur et vous laisse choisir lesquels garder.",
     bullets: [
-      "Détection avancée des doublons : à venir",
-      "Comparaison par contenu (pas seulement le nom)",
-      "Suppression groupée avec validation",
+      "Détection des doublons stricts, sans aucune limite",
+      "Aperçu et comparaison avant toute suppression",
+      "Suppression groupée, toujours envoyée à la corbeille",
     ],
+    video: "demo-doublons.mp4",
   },
   ranger: {
+    eyebrow: "Retrio Pro",
     title: "Un classement automatique, sans effort.",
+    subtitle:
+      "Vos fichiers rangés par type, par date ou par fournisseur — sans jamais rien déplacer sans votre accord.",
     bullets: [
-      "Analyse du rangement : à venir",
-      "Suggestions de rangement par dossier",
-      "Renommage intelligent en un clic",
+      "Classement par type, par date ou par type puis année",
+      "Vous validez chaque déplacement, rien n'est automatique",
+      "Renommage intelligent selon des règles simples (date, fournisseur, contenu…)",
     ],
+    video: "demo-ranger.mp4",
   },
   nettoyage: {
+    eyebrow: "Retrio Pro",
     title: "Un nettoyage plus profond qu'un simple vide-cache.",
+    subtitle:
+      "Retrio traque ce qui encombre vraiment votre disque, bien au-delà des doublons évidents.",
     bullets: [
-      "Quasi-doublons repérés par le contenu des documents (pas juste le nom)",
+      "Quasi-doublons repérés par le contenu, pas juste le nom",
       "Téléchargements oubliés depuis des mois",
       "Photos en rafale regroupées automatiquement",
       "Score de santé de votre PC à chaque analyse",
-      "Rien n'est supprimé sans accord",
     ],
+    video: "demo-nettoyage.mp4",
   },
 };
 
 function buildLockedTab(key, el) {
   const info = LOCKED_TABS[key];
+  el.classList.add("locked-tab");
+  const videoBlock = info.video
+    ? `<div class="locked-tab-video">
+         <video class="demo-video" id="lockedTabVideo" controls autoplay muted loop playsinline preload="auto">
+           <source src="${info.video}" type="video/mp4">
+         </video>
+         <div class="locked-tab-video-error" id="lockedTabVideoError" hidden>Vidéo indisponible pour le moment.</div>
+         <button type="button" class="locked-tab-fs" id="lockedTabFsBtn" title="Plein écran" aria-label="Plein écran">⛶</button>
+       </div>`
+    : `<div class="locked-tab-video locked-tab-video-soon"><div class="locked-tab-soon">Démo vidéo bientôt disponible</div></div>`;
   el.innerHTML = `
-    <h2>${info.title}</h2>
-    <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-    <button class="btn btn-pro">Passer à Retrio Pro</button>
+    <div class="locked-tab-grid">
+      <div class="locked-tab-copy">
+        <div class="locked-tab-eyebrow">${escapeHtml(info.eyebrow)}</div>
+        <h2>${escapeHtml(info.title)}</h2>
+        <p class="locked-tab-subtitle">${escapeHtml(info.subtitle)}</p>
+        <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+        <div class="locked-tab-actions">
+          <button class="btn btn-pro">Passer à Retrio Pro — 4,99 €/mois</button>
+        </div>
+      </div>
+      ${videoBlock}
+    </div>
   `;
+  if (info.video) {
+    const vid = document.getElementById("lockedTabVideo");
+    const fsBtn = document.getElementById("lockedTabFsBtn");
+    const errBox = document.getElementById("lockedTabVideoError");
+    if (vid) {
+      vid.play().catch(() => {});
+      vid.addEventListener("error", () => {
+        if (errBox) errBox.hidden = false;
+        console.error("Retrio: échec de chargement de la vidéo", info.video);
+      });
+    }
+    if (fsBtn && vid) {
+      fsBtn.onclick = () => {
+        if (vid.requestFullscreen) vid.requestFullscreen().catch(() => {});
+        else if (vid.webkitRequestFullscreen) vid.webkitRequestFullscreen();
+      };
+    }
+  }
+}
+
+function renderToolTab(tab, el) {
+  el.classList.remove("locked-tab");
+  if (isEffectivePremium()) {
+    if (tab === "ranger") renderRangerTab(el);
+    else if (tab === "doublons") renderDoublonsTab(el);
+    else if (tab === "nettoyage") renderNettoyageTab(el);
+  } else {
+    buildLockedTab(tab, el);
+  }
 }
 
 // -------------------- Ranger vos documents (bêta fonctionnelle) --------------------

@@ -4,9 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from retrio_web import Api, FileEntry, scan_folders, get_known_folders
+from retrio_web import Api, FileEntry, _xml_text, scan_folders, get_known_folders
 
 class GuidedSearchTests(unittest.TestCase):
+    def test_malicious_xml_entity_is_rejected(self):
+        payload=b'<!DOCTYPE x [<!ENTITY secret SYSTEM "file:///C:/Windows/win.ini">]><x>&secret;</x>'
+        self.assertEqual(_xml_text(payload),'')
+
     def test_technical_folders_excluded(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

@@ -34,7 +34,7 @@ import threading
 import urllib.parse
 import urllib.request
 import webbrowser
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 import zipfile
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -43,7 +43,7 @@ from pathlib import Path
 
 from pdf_content import PdfService, read_pdf
 from image_content import ImageReader
-from retrieval import search as search_by_content, evidence
+from retrieval import SearchIndex, search as search_by_content, evidence
 
 APP_NAME = "Retrio"
 APP_VERSION = "0.5.0 (bêta)"
@@ -627,7 +627,7 @@ PREMIUM_UNLIMITED = 10**9
 
 # -- licence Retrio Pro (Stripe + service de licence Cloudflare) ------------
 LICENSE_API_BASE = "https://retrio-license.retrio-pro.workers.dev"
-PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/test_7sY4gB1IX2BUdVu2nd08g00"  # TODO: remplacer par le lien de PRODUCTION avant la mise en ligne
+PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00"  # lien de PRODUCTION Stripe
 
 
 def _license_config_path():
@@ -693,6 +693,7 @@ class Api:
     def __init__(self):
         self.window = None
         self.scan_result = ScanResult()
+        self.search_index = None
         self.type_filter = "tous"
         self._stop = threading.Event()
         self._scan_lock = threading.Lock()
@@ -741,6 +742,7 @@ class Api:
                 self._run_js(f"window.onScanProgress({n_files}, {json.dumps(current_path)})")
             result = scan_folders(roots,progress_cb=progress_cb,stop_flag=self._stop)
             self.scan_result = result
+            self.search_index = SearchIndex(result.entries)
             payload = dict(roots=roots,total_files=result.total_files,total_size_human=human_size(result.total_size),
                 content_indexed_count=result.content_indexed_count,counts=dict(result.counts_by_category),
                 pdf_read=result.pdf_read,pdf_ocr=result.pdf_ocr,pdf_unread=result.pdf_unread,
@@ -845,7 +847,7 @@ class Api:
         try:
             url = f"{LICENSE_API_BASE}/license/check?email={urllib.parse.quote(email)}"
             req = urllib.request.Request(url, headers={"User-Agent": "Retrio/1.0"})
-            with urllib.request.urlopen(req, timeout=6) as resp:
+            with urllib.request.urlopen(req, timeout=6) as resp:  # nosec B310 - URL is built from a fixed HTTPS origin.
                 data = json.loads(resp.read().decode("utf-8"))
             self._license_cache.update({
                 "premium": bool(data.get("premium")),
@@ -874,7 +876,13 @@ class Api:
         if self.type_filter == 'image':
             query = re.sub(r'\b(photos?|images?)\b', '', query, flags=re.I).strip()
         if query.strip():
-            all_matches = search_entries(pool, query, limit=None)
+            if self.search_index is not None:
+                all_matches = search_entries(self.search_index, query, limit=None)
+                if pool is not self.scan_result.entries:
+                    allowed = {id(entry) for entry in pool}
+                    all_matches = [entry for entry in all_matches if id(entry) in allowed]
+            else:
+                all_matches = search_entries(pool, query, limit=None)
             matches = all_matches[:60]
         else:
             all_matches = pool
@@ -1255,9 +1263,9 @@ def main():
     api.window = window
     threading.Thread(target=api.refresh_license, daemon=True).start()
     if icon_path:
-        webview.start(icon=icon_path)
+        webview.start(icon=icon_path, debug=False)
     else:
-        webview.start()
+        webview.start(debug=False)
 
 
 if __name__ == "__main__":

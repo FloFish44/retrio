@@ -2,6 +2,8 @@
 import re
 import unicodedata
 from difflib import SequenceMatcher
+from functools import lru_cache
+from collections import defaultdict
 
 STOP = set('le la les un une des de du d l avec et ou sur dans pour mon ma mes au aux ce cette ces the a an with and or for of my je moi tu me retrouve retrouver trouve trouver cherche chercher montre montrer fichier fichiers document documents stp sil te plait concernant'.split())
 CONCEPTS = [
@@ -33,6 +35,15 @@ def query_groups(query):
         if group not in groups: groups.append(group)
     return groups
 
+@lru_cache(maxsize=65536)
+def fuzzy_match(word,candidate):
+    if not candidate.isalpha() or abs(len(word)-len(candidate))>1:
+        return False
+    matcher=SequenceMatcher(None,word,candidate)
+    # quick_ratio is an inexpensive upper bound. If it is below the final
+    # threshold, the full matching-block calculation cannot possibly pass.
+    return matcher.quick_ratio()>=.86 and matcher.ratio()>=.86
+
 def relevance(entry,groups):
     if not groups: return 0
     # Cached token sets avoid retokenizing multi-page documents on every search.
@@ -53,14 +64,53 @@ def relevance(entry,groups):
             continue
         # Never fuzz short terms like EDF into arbitrary hash/filename fragments.
         fuzzy=any(len(word)>=5 and word.isalpha() and any(
-            candidate.isalpha() and abs(len(word)-len(candidate))<=1 and
-            SequenceMatcher(None,word,candidate).ratio()>=.86
-            for candidate in name|content) for word in group)
+            fuzzy_match(word,candidate) for candidate in name|content
+        ) for word in group)
         if fuzzy: score+=4
         else: return 0
     return score
 
+class SearchIndex:
+    """In-memory token postings used to avoid scanning every entry per query."""
+    def __init__(self,entries):
+        self.entries=entries
+        self.postings=defaultdict(list)
+        for index,entry in enumerate(entries):
+            import os
+            # Do not attach three token sets to every entry here: at hundreds
+            # of thousands of files that costs far more RAM than the postings.
+            fields=(set(tokenize(entry.stem)),set(tokenize(entry.content)),set(tokenize(os.path.dirname(entry.path))))
+            name,content,folder=fields
+            for token in name|content|folder:
+                self.postings[token].append(index)
+
+    def search(self,query,limit=60):
+        groups=query_groups(query)
+        if not groups: return []
+        candidates=None
+        fuzzy_tokens=tuple(token for token in self.postings if token.isalpha())
+        for group in groups:
+            matched=set()
+            indexable=False
+            for word in group:
+                indexable=True
+                matched.update(self.postings.get(word,()))
+                if len(word)>=5 and word.isalpha():
+                    for candidate in fuzzy_tokens:
+                        if fuzzy_match(word,candidate):
+                            matched.update(self.postings[candidate])
+            if not indexable:
+                continue
+            candidates=matched if candidates is None else candidates & matched
+            if not candidates: return []
+        if candidates is None: candidates=range(len(self.entries))
+        ranked=[(relevance(self.entries[i],groups),self.entries[i]) for i in candidates]
+        ranked=[pair for pair in ranked if pair[0]>0]
+        ranked.sort(key=lambda pair:(-pair[0],pair[1].name.lower()))
+        return [e for _,e in ranked[:limit]] if limit is not None else [e for _,e in ranked]
+
 def search(entries,query,limit=60):
+    if isinstance(entries,SearchIndex): return entries.search(query,limit)
     groups=query_groups(query)
     ranked=[(relevance(e,groups),e) for e in entries]
     ranked=[pair for pair in ranked if pair[0]>0]
