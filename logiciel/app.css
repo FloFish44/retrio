@@ -131,6 +131,22 @@ button { font-family: inherit; cursor: pointer; }
 }
 .lock-icon { width: 12px; height: 12px; color: var(--text-disabled); stroke-width: 2; flex-shrink: 0; }
 
+.nav-teaser-badge {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 600;
+  color: #B8863F; background: rgba(217,193,133,.28);
+  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.nav-lock-icon { position: relative; width: 12px; height: 12px; flex-shrink: 0; }
+.nav-lock-icon::before {
+  content: ""; position: absolute; bottom: 0; left: 1px; width: 10px; height: 7px;
+  border-radius: 2px; background: var(--text-disabled);
+}
+.nav-lock-icon::after {
+  content: ""; position: absolute; top: 0; left: 3px; width: 6px; height: 6px;
+  border: 1.4px solid var(--text-disabled); border-bottom: none; border-radius: 5px 5px 0 0;
+}
+.nav-right[hidden] { display: none; }
+
 .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
 .privacy-note { display: flex; align-items: flex-start; gap: 9px; padding: 10px 8px; }
 .privacy-note .dot { width: 7px; height: 7px; border-radius: 50%; background: #2F6B4A; margin-top: 5px; flex-shrink: 0; }
@@ -290,15 +306,27 @@ button { font-family: inherit; cursor: pointer; }
 }
 .locked-tab-grid { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 440px; }
 .locked-tab-copy { padding: 46px 42px; display: flex; flex-direction: column; justify-content: center; }
-.locked-tab-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #D9C185; margin-bottom: 12px; }
+.locked-tab-eyebrow { margin: 0 0 14px; }
+.locked-tab-pill {
+  display: inline-flex; align-items: center; font-family: var(--font-mono);
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: #D9C185; background: rgba(217,193,133,.16); border-radius: 999px; padding: 5px 12px;
+}
 .locked-tab h2 { font-family: var(--font-serif); font-size: 30px; margin: 0 0 14px; font-weight: 700; line-height: 1.18; }
 .locked-tab-subtitle { font-size: 14px; color: #CFE0D3; line-height: 1.6; margin: 0 0 22px; max-width: 46ch; }
 .locked-tab ul { margin: 0 0 28px; padding-left: 0; list-style: none; color: #F5F1E6; font-size: 13.5px; line-height: 1.9; }
-.locked-tab ul li { padding-left: 26px; position: relative; margin-bottom: 4px; }
-.locked-tab ul li::before { content: "✓"; position: absolute; left: 0; top: 0; color: #D9C185; font-weight: 700; }
+.locked-tab ul li { padding-left: 28px; position: relative; margin-bottom: 8px; }
+.locked-tab ul li::before {
+  content: "✓"; position: absolute; left: 0; top: 1px; width: 18px; height: 18px;
+  border-radius: 50%; background: rgba(217,193,133,.18); color: #D9C185;
+  font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
 .locked-tab .btn-pro { width: auto; padding: 15px 30px; font-size: 13.5px; box-shadow: 0 10px 26px rgba(0,0,0,.28); }
 .locked-tab-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.locked-tab-video { position: relative; background: #0A140F; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.locked-tab-reassurance { font-size: 11.5px; color: #9DB4A5; margin-top: 12px; }
+.locked-tab-video-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.locked-tab-video-label { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: #9DB4A5; text-align: center; padding-top: 46px; }
+.locked-tab-video { position: relative; flex: 1; background: #0A140F; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .locked-tab-video .demo-video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; margin: 0; border-radius: 0; background: #0A140F; }
 .locked-tab-fs { position: absolute; bottom: 16px; right: 16px; background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 8px; width: 36px; height: 36px; font-size: 17px; cursor: pointer; line-height: 1; }
 .locked-tab-fs:hover { background: rgba(0,0,0,.78); }

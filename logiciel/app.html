@@ -33,24 +33,27 @@
       <button class="nav-item" data-tab="doublons">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
         <span class="nav-label">Doublons</span>
-        <span class="nav-right">
-          <span class="badge badge-beta">Bêta</span>
+        <span class="nav-right" id="navRightDoublons">
+          <span class="nav-teaser-badge" id="teaserDoublons">3 751</span>
+          <span class="nav-lock-icon" aria-hidden="true"></span>
         </span>
       </button>
 
       <button class="nav-item" data-tab="ranger">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg></span>
         <span class="nav-label">Ranger vos documents</span>
-        <span class="nav-right">
-          <span class="badge badge-beta">Bêta</span>
+        <span class="nav-right" id="navRightRanger">
+          <span class="nav-teaser-badge" id="teaserRanger">1 858</span>
+          <span class="nav-lock-icon" aria-hidden="true"></span>
         </span>
       </button>
 
       <button class="nav-item" data-tab="nettoyage">
         <span class="nav-icon-wrap"><svg class="icon" viewBox="0 0 24 24"><path d="M14.5 3.5 20.5 9.5 9.5 20.5H3.5v-6L14.5 3.5Z"/><path d="M13 5 19 11"/></svg></span>
         <span class="nav-label">Nettoyage</span>
-        <span class="nav-right">
-          <span class="badge badge-beta">Bêta</span>
+        <span class="nav-right" id="navRightNettoyage">
+          <span class="nav-teaser-badge" id="teaserNettoyage">3,7 Go</span>
+          <span class="nav-lock-icon" aria-hidden="true"></span>
         </span>
       </button>
     </nav>
@@ -76,10 +79,31 @@
   <!-- ============ MAIN ============ -->
   <main class="main">
     <div class="main-inner">
-      <div id="rechercheCore"><h1 class="headline">Marre de perdre vos fichiers ou photos ?</h1>
-      <p class="subhead">Retrio est la solution. Retrouvez-les simplement, avec vos mots.</p>
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#1B4332"></div>
+          <div class="stat-num" id="statFiles">9 798</div>
+          <div class="stat-label">Fichiers analysés</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#D9C185"></div>
+          <div class="stat-num" id="statPdf">18</div>
+          <div class="stat-label">PDF trouvés</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#C9A187"></div>
+          <div class="stat-num" id="statImages">485</div>
+          <div class="stat-label">Photos trouvées</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#1B4332"></div>
+          <div class="stat-num" id="statSize">3,7 Go</div>
+          <div class="stat-label">Espace occupé</div>
+        </div>
+      </div>
 
-<h2 class="step">1. Choisissez où chercher</h2><p>Vous pouvez modifier cette sélection à tout moment, puis relancer l’analyse.</p>
+      <div id="rechercheCore">
+      <h2 class="step">1. Choisissez où chercher</h2><p>Vous pouvez modifier cette sélection à tout moment, puis relancer l’analyse.</p>
 
       <div class="settings-panel" id="settingsPanel">
         <div class="settings-inner">
@@ -99,29 +123,6 @@
       </div>
 
       <div id="pdfReport" role="status" hidden style="padding:14px 18px;margin:12px 0;border:1px solid #DED4BC;border-radius:10px;color:#3C4A40;max-height:180px;overflow:auto;font-size:14px;line-height:1.6"></div>
-      <h2 class="step">3. Voici les fichiers trouvés</h2><div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-icon" style="background:#1B4332"></div>
-          <div class="stat-num" id="statFiles">0</div>
-          <div class="stat-label">Fichiers analysés</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:#D9C185"></div>
-          <div class="stat-num" id="statPdf">0</div>
-          <div class="stat-label">PDF trouvés</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:#C9A187"></div>
-          <div class="stat-num" id="statImages">0</div>
-          <div class="stat-label">Photos trouvées</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:#1B4332"></div>
-          <div class="stat-num" id="statSize">0 o</div>
-          <div class="stat-label">Espace occupé</div>
-        </div>
-      </div>
-
       </div><div class="tab-content" id="tabRecherche">
         <h2 class="step">4. Retrouvez votre fichier avec vos mots</h2><div class="search-row">
           <div class="search-input-wrap">

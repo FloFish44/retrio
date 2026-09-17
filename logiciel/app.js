@@ -10,7 +10,16 @@ const state = {
   ranger: { scheme: "type", sort: "name", filter: "tous", selected: new Set(), suggestions: [], freeLimit: 0 },
   doublons: { groups: [], freeLimit: 0, totalRecoverable: "", selected: new Set() },
   nettoyage: { items: [], freeLimit: 0, totalRecoverable: "", selected: new Set(), healthScore: null, healthLabel: "", counts: {} },
+  teasers: { doublons: null, ranger: null, nettoyage: null },
 };
+
+// Chiffres d'exemple affichés tant qu'aucune analyse n'a été lancée sur cet
+// ordinateur — remplacés par les vrais chiffres calculés dès que possible.
+const TEASER_FALLBACK = { doublons: "3 751", ranger: "1 858", nettoyage: "3,7 Go" };
+
+function formatFr(n) {
+  return Number(n).toLocaleString("fr-FR");
+}
 
 function api() { return window.pywebview && window.pywebview.api; }
 
@@ -160,12 +169,56 @@ function refreshPreviewUI() {
   }
   if (banner) banner.hidden = !previewAsFree;
   if (activeMsg) activeMsg.hidden = !licenseState.premium || previewAsFree;
+  updateNavLockVisibility();
   const activeBtn = document.querySelector('.nav-item.active');
   const activeTab = activeBtn && activeBtn.dataset.tab;
   const toolMap = { ranger: 'tabRanger', doublons: 'tabDoublons', nettoyage: 'tabNettoyage' };
   if (activeTab && toolMap[activeTab]) {
     renderToolTab(activeTab, document.getElementById(toolMap[activeTab]));
   }
+}
+
+function updateNavLockVisibility() {
+  const locked = !isEffectivePremium();
+  ["Doublons", "Ranger", "Nettoyage"].forEach((name) => {
+    const el = document.getElementById("navRight" + name);
+    if (el) el.hidden = !locked;
+  });
+}
+
+function applyTeaserValue(key, value) {
+  state.teasers[key] = value;
+  const idMap = { doublons: "teaserDoublons", ranger: "teaserRanger", nettoyage: "teaserNettoyage" };
+  const badge = document.getElementById(idMap[key]);
+  if (badge) badge.textContent = value;
+  const activeBtn = document.querySelector(".nav-item.active");
+  const activeTab = activeBtn && activeBtn.dataset.tab;
+  if (activeTab === key && !isEffectivePremium()) {
+    const map = { doublons: "tabDoublons", ranger: "tabRanger", nettoyage: "tabNettoyage" };
+    const el = document.getElementById(map[key]);
+    if (el) buildLockedTab(key, el);
+  }
+}
+
+// Calcule les vrais chiffres (doublons / fichiers mal rangés / espace
+// récupérable) à partir de la dernière analyse, pour remplacer les chiffres
+// d'exemple affichés par défaut. Se déclenche en tâche de fond, sans
+// bloquer l'interface — chaque badge se met à jour dès que sa réponse arrive.
+function refreshTeasers() {
+  if (!state.hasScanned) return;
+  api().find_duplicates().then((raw) => {
+    const data = JSON.parse(raw);
+    const total = (data.groups || []).reduce((sum, g) => sum + Math.max(0, g.files.length - 1), 0);
+    applyTeaserValue("doublons", formatFr(total));
+  }).catch(() => {});
+  api().organize_suggestions("type").then((raw) => {
+    const data = JSON.parse(raw);
+    applyTeaserValue("ranger", formatFr((data.suggestions || []).length));
+  }).catch(() => {});
+  api().cleanup_suggestions().then((raw) => {
+    const data = JSON.parse(raw);
+    if (data.total_recoverable_human) applyTeaserValue("nettoyage", data.total_recoverable_human);
+  }).catch(() => {});
 }
 
 // -------------------- Navigation --------------------
@@ -190,7 +243,8 @@ function bindNav() {
 
 const LOCKED_TABS = {
   doublons: {
-    eyebrow: "Retrio Pro",
+    eyebrow: "RETRIO PRO",
+    headlineFor: (n) => `${n} doublons se cachent dans votre ordinateur.`,
     title: "Récupérez de l'espace disque en un clic.",
     subtitle:
       "Retrio repère les fichiers strictement identiques sur votre ordinateur et vous laisse choisir lesquels garder.",
@@ -202,7 +256,8 @@ const LOCKED_TABS = {
     video: "demo-doublons.mp4",
   },
   ranger: {
-    eyebrow: "Retrio Pro",
+    eyebrow: "RETRIO PRO",
+    headlineFor: (n) => `${n} fichiers traînent, mal rangés.`,
     title: "Un classement automatique, sans effort.",
     subtitle:
       "Vos fichiers rangés par type, par date ou par fournisseur — sans jamais rien déplacer sans votre accord.",
@@ -214,7 +269,8 @@ const LOCKED_TABS = {
     video: "demo-ranger.mp4",
   },
   nettoyage: {
-    eyebrow: "Retrio Pro",
+    eyebrow: "RETRIO PRO",
+    headlineFor: (n) => `${n} d'espace disque à récupérer.`,
     title: "Un nettoyage plus profond qu'un simple vide-cache.",
     subtitle:
       "Retrio traque ce qui encombre vraiment votre disque, bien au-delà des doublons évidents.",
@@ -230,28 +286,32 @@ const LOCKED_TABS = {
 
 function buildLockedTab(key, el) {
   const info = LOCKED_TABS[key];
+  const teaserValue = state.teasers[key] || TEASER_FALLBACK[key];
   el.classList.add("locked-tab");
   const videoBlock = info.video
-    ? `<div class="locked-tab-video">
+    ? `<div class="locked-tab-video-label">VOIR LA DÉMO</div>
+       <div class="locked-tab-video">
          <video class="demo-video" id="lockedTabVideo" controls autoplay muted loop playsinline preload="auto">
            <source src="${info.video}" type="video/mp4">
          </video>
          <div class="locked-tab-video-error" id="lockedTabVideoError" hidden>Vidéo indisponible pour le moment.</div>
          <button type="button" class="locked-tab-fs" id="lockedTabFsBtn" title="Plein écran" aria-label="Plein écran">⛶</button>
        </div>`
-    : `<div class="locked-tab-video locked-tab-video-soon"><div class="locked-tab-soon">Démo vidéo bientôt disponible</div></div>`;
+    : `<div class="locked-tab-video-label">VOIR LA DÉMO</div>
+       <div class="locked-tab-video locked-tab-video-soon"><div class="locked-tab-soon">Démo vidéo bientôt disponible</div></div>`;
   el.innerHTML = `
     <div class="locked-tab-grid">
       <div class="locked-tab-copy">
-        <div class="locked-tab-eyebrow">${escapeHtml(info.eyebrow)}</div>
-        <h2>${escapeHtml(info.title)}</h2>
+        <div class="locked-tab-eyebrow"><span class="locked-tab-pill">${escapeHtml(info.eyebrow)}</span></div>
+        <h2>${escapeHtml(info.headlineFor ? info.headlineFor(teaserValue) : info.title)}</h2>
         <p class="locked-tab-subtitle">${escapeHtml(info.subtitle)}</p>
         <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
         <div class="locked-tab-actions">
           <button class="btn btn-pro">Passer à Retrio Pro — 4,99 €/mois</button>
         </div>
+        <div class="locked-tab-reassurance">Sans engagement · Vos fichiers restent sur votre ordinateur</div>
       </div>
-      ${videoBlock}
+      <div class="locked-tab-video-col">${videoBlock}</div>
     </div>
   `;
   if (info.video) {
@@ -849,6 +909,8 @@ window.onScanDone = function (resultJson) {
   const q = document.getElementById("searchInput").value.trim();
   if (q) runSearch(q);
   else runSearch("");
+
+  if (!isEffectivePremium()) refreshTeasers();
 };
 
 window.onScanError = function(message) {
