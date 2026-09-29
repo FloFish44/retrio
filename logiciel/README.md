@@ -3,9 +3,12 @@
 Application de bureau Retrio : recherche documentaire locale, avec une interface
 web (HTML/CSS/JS) affichée dans une fenêtre native via **pywebview** (WebView2).
 
-100% local : aucune donnée, aucun fichier et aucune requête n'est envoyé sur
-Internet. Le traitement (parcours des dossiers, index, recherche) se fait
-entièrement sur la machine de l'utilisateur.
+Le traitement des dossiers, l'index et les recherches se fait entièrement sur
+la machine de l'utilisateur : aucun document, nom de fichier, chemin, contenu
+extrait ou texte de recherche n'est envoyé. Lorsque la télémétrie est configurée
+au déploiement, le logiciel peut transmettre des mesures techniques et d'usage
+pseudonymes. Il contacte aussi le service de licence Retrio lorsque l'utilisateur
+renseigne une adresse de licence. Aucune clé de service n'est intégrée au code.
 
 ## Fichiers
 

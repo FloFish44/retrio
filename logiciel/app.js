@@ -92,13 +92,20 @@ let previewAsFree = false;
 
 function bindPremium() {
   const dialog = document.getElementById("proDialog");
+  dialog.addEventListener("close", () => {
+    try { api().track_premium_page_closed(); } catch (e) {}
+  });
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-pro");
     if (!btn) return;
     e.preventDefault();
+    const activeBtn = document.querySelector(".nav-item.active");
+    const section = (activeBtn && activeBtn.dataset.tab) || "";
+    try { api().track_premium_feature_clicked(section); } catch (err) {}
     const emailInput = document.getElementById("proEmailInput");
     if (emailInput && licenseState.email) emailInput.value = licenseState.email;
     dialog.showModal();
+    try { api().track_premium_page_viewed(section); } catch (err) {}
   });
   document.getElementById("proSubscribeBtn").onclick = () => api().open_premium_checkout();
   const previewBtn = document.getElementById("proPreviewToggle");

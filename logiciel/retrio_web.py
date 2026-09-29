@@ -44,6 +44,7 @@ from pathlib import Path
 from pdf_content import PdfService, read_pdf
 from image_content import ImageReader
 from retrieval import SearchIndex, search as search_by_content, evidence
+from telemetry import get_telemetry
 
 APP_NAME = "Retrio"
 APP_VERSION = "0.5.0 (bêta)"
@@ -629,6 +630,12 @@ PREMIUM_UNLIMITED = 10**9
 LICENSE_API_BASE = "https://retrio-license.retrio-pro.workers.dev"
 PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00"  # lien de PRODUCTION Stripe
 
+# Sections génériques de l'app pouvant déclencher la mise en avant Premium
+# (mêmes clés que l'attribut data-tab de app.html). Sert uniquement à
+# qualifier grossièrement premium_feature_clicked / premium_page_viewed —
+# jamais de texte libre envoyé à PostHog.
+PREMIUM_FEATURE_SECTIONS = {"recherche", "doublons", "ranger", "nettoyage"}
+
 
 def _license_config_path():
     base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
@@ -699,6 +706,10 @@ class Api:
         self._scan_lock = threading.Lock()
         self._scanning = False
         self._license_cache = self._load_license_cache()
+        self._telemetry = get_telemetry()
+        self._telemetry.set_is_pro(self._is_premium())
+        self._telemetry_lock = threading.Lock()
+        self._premium_dialog_open = False
 
     def _run_js(self, code):
         try:
@@ -718,6 +729,7 @@ class Api:
         except Exception:
             return None
         if result:
+            self._telemetry.capture("folder_access_granted")
             return result[0]
         return None
 
@@ -729,6 +741,8 @@ class Api:
             if self._scanning: return False
             self._scanning = True
             self._stop.clear()
+        self._telemetry.track_onboarding_started()
+        self._telemetry.capture("index_started", {"folder_count": len(roots)})
         threading.Thread(target=self._scan_worker,args=(roots,),daemon=True).start()
         return True
 
@@ -737,6 +751,8 @@ class Api:
         return True
 
     def _scan_worker(self, roots):
+        import time as _time
+        started_at = _time.perf_counter()
         try:
             def progress_cb(n_files,current_path):
                 self._run_js(f"window.onScanProgress({n_files}, {json.dumps(current_path)})")
@@ -749,8 +765,20 @@ class Api:
                 pdf_partial=result.pdf_partial,errors=result.errors,cancelled=result.cancelled,
                 pdf_issues=result.pdf_issues)
             self._run_js(f"window.onScanDone({json.dumps(json.dumps(payload))})")
+            self._telemetry.capture("index_completed", {
+                "duration_seconds": round(_time.perf_counter() - started_at, 1),
+                "files_indexed": result.total_files,
+                "content_indexed_count": result.content_indexed_count,
+                "errors": result.errors,
+                "cancelled": result.cancelled,
+            })
+            self._telemetry.track_onboarding_completed()
         except Exception as exc:
             self._run_js(f"window.onScanError({json.dumps('Analyse interrompue : '+type(exc).__name__)})")
+            self._telemetry.capture("index_failed", {
+                "duration_seconds": round(_time.perf_counter() - started_at, 1),
+                "error_type": type(exc).__name__,
+            })
         finally:
             with self._scan_lock: self._scanning = False
 
@@ -843,11 +871,14 @@ class Api:
         if not email:
             self._license_cache.update({"premium": False, "status": "none"})
             self._save_license_cache()
+            self._telemetry.set_is_pro(False)
             return json.dumps(self._license_cache)
+        was_premium = self._is_premium()
         try:
             url = f"{LICENSE_API_BASE}/license/check?email={urllib.parse.quote(email)}"
             req = urllib.request.Request(url, headers={"User-Agent": "Retrio/1.0"})
-            with urllib.request.urlopen(req, timeout=6) as resp:  # nosec B310 - URL is built from a fixed HTTPS origin.
+            # The URL is built exclusively from the fixed HTTPS origin above.
+            with urllib.request.urlopen(req, timeout=6) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
             self._license_cache.update({
                 "premium": bool(data.get("premium")),
@@ -855,18 +886,69 @@ class Api:
                 "updated_at": datetime.now().isoformat(),
             })
             self._save_license_cache()
-        except Exception:
-            pass
+            # Ne se déclenche que sur une réponse RÉELLE et à jour du
+            # serveur de licence (jamais une supposition locale) : c'est
+            # la seule source d'information fiable sur l'état réel de
+            # l'abonnement.
+            is_premium_now = self._is_premium()
+            self._telemetry.set_is_pro(is_premium_now)
+            if is_premium_now and not was_premium:
+                self._telemetry.capture("subscription_started")
+            elif was_premium and not is_premium_now:
+                self._telemetry.capture("subscription_cancelled")
+        except Exception as exc:
+            self._telemetry.track_error("license_refresh", exc)
         return json.dumps(self._license_cache)
 
     def open_premium_checkout(self):
+        self._telemetry.capture("checkout_started")
         try:
             webbrowser.open(PREMIUM_CHECKOUT_URL)
         except Exception:
             pass
         return True
 
+    @staticmethod
+    def _sanitize_premium_section(section):
+        """Ne renvoie que l'une des clés d'onglet connues (recherche/doublons/
+        ranger/nettoyage) — jamais la valeur brute reçue du JS, pour ne
+        jamais transmettre de texte libre à PostHog."""
+        section = str(section or "").strip().lower()
+        return section if section in PREMIUM_FEATURE_SECTIONS else "unknown"
+
+    def track_premium_feature_clicked(self, section=""):
+        """Appelé depuis app.js à chaque clic réel sur un bouton '.btn-pro'
+        (déclencheur de la mise en avant Premium), juste avant l'ouverture
+        de la modale — un clic = un événement, pas de garde anti-doublon
+        nécessaire car il n'existe qu'un seul gestionnaire de clic délégué."""
+        self._telemetry.capture("premium_feature_clicked", {
+            "section": self._sanitize_premium_section(section),
+        })
+        return True
+
+    def track_premium_page_viewed(self, section=""):
+        """Appelé depuis app.js juste après l'affichage réel de la modale
+        Premium (dialog.showModal()). Anti-doublon : ignore un second appel
+        tant que la modale précédente n'a pas été refermée côté JS."""
+        with self._telemetry_lock:
+            if self._premium_dialog_open:
+                return True
+            self._premium_dialog_open = True
+        self._telemetry.capture("premium_page_viewed", {
+            "section": self._sanitize_premium_section(section),
+        })
+        return True
+
+    def track_premium_page_closed(self):
+        """Réarme le garde anti-doublon de premium_page_viewed quand la
+        modale Premium est refermée côté JS (dialog 'close')."""
+        with self._telemetry_lock:
+            self._premium_dialog_open = False
+        return True
+
     def search(self, query, type_filter, folder=""):
+        import time as _time
+        started_at = _time.perf_counter()
         self.type_filter = type_filter or "tous"
         pool = self._filtered(self.scan_result.entries, self.type_filter)
         if folder:
@@ -911,10 +993,36 @@ class Api:
                 "method": proof["method"],
                 "read_status": entry.read_status,
             })
+        self._telemetry.capture("search_performed", {
+            "has_query": bool(query.strip()),
+            "type_filter": self.type_filter,
+            "folder_scoped": bool(folder),
+            "results_count": len(all_matches),
+            "duration_ms": round((_time.perf_counter() - started_at) * 1000),
+        })
         return json.dumps({"matches": match_dicts, "count_label": count_label})
 
     # -- actions sur un fichier ------------------------------------------------
-    def open_path(self, path):
+    def _known_file(self, path, *, require_exists=True):
+        """Return the scanned entry matching *path*, never an arbitrary UI path."""
+        try:
+            resolved = Path(str(path)).resolve(strict=require_exists)
+        except (OSError, RuntimeError, TypeError, ValueError):
+            return None, None
+        known = next(
+            (
+                entry
+                for entry in self.scan_result.entries
+                if os.path.normcase(os.path.abspath(entry.path))
+                == os.path.normcase(str(resolved))
+            ),
+            None,
+        )
+        if known is None or (require_exists and not resolved.is_file()):
+            return None, None
+        return known, resolved
+
+    def _open_native(self, path):
         try:
             if sys.platform == "win32":
                 os.startfile(path)  # type: ignore[attr-defined]
@@ -926,11 +1034,33 @@ class Api:
             pass
         return True
 
+    def open_path(self, path):
+        match, resolved = self._known_file(path)
+        if match is None:
+            return False
+        result = self._open_native(str(resolved))
+        # Catégorie générique (« pdf », « images »...) si le fichier fait
+        # partie de la dernière analyse — jamais le nom ni le chemin.
+        category = None
+        try:
+            category = match.category if match else None
+        except Exception:
+            category = None
+        self._telemetry.capture("search_result_opened", {"file_category": category})
+        return result
+
     def open_folder(self, path):
-        self.open_path(os.path.dirname(path))
+        match, resolved = self._known_file(path)
+        if match is None:
+            return False
+        self._open_native(str(resolved.parent))
         return True
 
     def copy_path(self, path):
+        match, resolved = self._known_file(path)
+        if match is None:
+            return False
+        path = str(resolved)
         try:
             if sys.platform == "win32":
                 subprocess.run(["clip"], input=path.encode("utf-16-le"), check=True)
@@ -1123,7 +1253,9 @@ class Api:
 
     def move_to_trash(self, path):
         try:
-            source = Path(str(path)).resolve(strict=True)
+            known, source = self._known_file(path)
+            if known is None:
+                return {"ok": False, "error": "Ce fichier ne fait pas partie de la dernière analyse."}
             if sys.platform == "win32":
                 from ctypes import wintypes
 
@@ -1148,6 +1280,7 @@ class Api:
             self.scan_result.entries = [e for e in self.scan_result.entries if os.path.normcase(e.path) != os.path.normcase(str(source))]
             return {"ok": True}
         except Exception as exc:
+            self._telemetry.track_error("move_to_trash", exc)
             return {"ok": False, "error": f"Suppression impossible : {type(exc).__name__}"}
 
     def move_to_trash_bulk(self, paths_json):
@@ -1194,17 +1327,20 @@ class Api:
 
     def _apply_single_organization(self, path, target):
         try:
-            source = Path(str(path)).resolve(strict=True)
-            requested = Path(str(target)).resolve(strict=False)
-            known = next((e for e in self.scan_result.entries if os.path.normcase(e.path) == os.path.normcase(str(source))), None)
-            if known is None or not source.is_file():
+            known, source = self._known_file(path)
+            if known is None:
                 return {"ok": False, "path": str(path), "error": "Ce fichier ne fait pas partie de la dernière analyse."}
+            requested = Path(str(target)).resolve(strict=False)
+            allowed_root = (source.parent / "Retrio - Classé").resolve(strict=False)
+            if requested != allowed_root and allowed_root not in requested.parents:
+                return {"ok": False, "path": str(path), "error": "Destination de classement non autorisée."}
             requested.parent.mkdir(parents=True, exist_ok=True)
             destination = _safe_target(requested)
             shutil.move(str(source), str(destination))
             known.path, known.name, known.stem = str(destination), destination.name, destination.stem
             return {"ok": True, "path": str(destination), "source": str(source)}
         except Exception as exc:
+            self._telemetry.track_error("organize_file", exc)
             return {"ok": False, "path": str(path), "error": f"Déplacement impossible : {type(exc).__name__}"}
 
     def apply_organization(self, path, target):
@@ -1238,7 +1374,10 @@ def main():
 
     if sys.platform == 'win32':
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Retrio.Desktop')
+    telemetry = get_telemetry()
+    telemetry.install_crash_handler()
     api = Api()
+    telemetry.start_session(app_version=APP_VERSION, is_pro=api._is_premium())
     html_path = resource_path("app.html")
 
     # Icône de la fenêtre : webview.start(icon=...) exige un vrai fichier
