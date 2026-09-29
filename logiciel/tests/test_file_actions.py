@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import sys
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from retrio_web import Api, FileEntry
@@ -50,6 +51,16 @@ class FileActionSecurityTests(unittest.TestCase):
             self.assertFalse(result["ok"])
             self.assertTrue(source.exists())
             self.assertFalse(escaped.exists())
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows only")
+    def test_native_open_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "known.txt"
+            source.write_text("known", encoding="utf-8")
+            api = self._api_with_file(source)
+
+            with mock.patch("os.startfile", side_effect=OSError("no association"), create=True):
+                self.assertFalse(api.open_path(source))
 
 
 if __name__ == "__main__":

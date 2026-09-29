@@ -47,7 +47,34 @@ from retrieval import SearchIndex, search as search_by_content, evidence
 from telemetry import get_telemetry
 
 APP_NAME = "Retrio"
-APP_VERSION = "0.5.0 (bêta)"
+APP_VERSION = "0.5.1 (bêta)"
+
+
+def _diagnostic_trace(label):
+    """Opt-in startup trace; never writes unless diagnostics are requested."""
+    if os.environ.get("RETRIO_DIAGNOSTICS") != "1":
+        return
+    try:
+        trace_dir = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / APP_NAME
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        with open(trace_dir / "startup_trace.log", "a", encoding="utf-8") as stream:
+            stream.write(f"{stamp} pid={os.getpid()} [app] {label}\n")
+    except Exception:
+        pass
+
+
+def _acquire_single_instance():
+    """Return a Windows mutex handle, or None when Retrio already runs."""
+    if sys.platform != "win32":
+        return True
+    handle = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\Retrio.Desktop.SingleInstance")
+    if not handle:
+        return None
+    if ctypes.windll.kernel32.GetLastError() == 183:
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return None
+    return handle
 
 # ---------------------------------------------------------------------------
 # Icône de l'application (PNG encodé en base64, intégré directement au
@@ -1030,9 +1057,10 @@ class Api:
                 subprocess.run(["open", path])
             else:
                 subprocess.run(["xdg-open", path])
-        except Exception:
-            pass
-        return True
+            return True
+        except Exception as exc:
+            self._telemetry.track_error("open_native", exc)
+            return False
 
     def open_path(self, path):
         match, resolved = self._known_file(path)
@@ -1046,15 +1074,15 @@ class Api:
             category = match.category if match else None
         except Exception:
             category = None
-        self._telemetry.capture("search_result_opened", {"file_category": category})
+        if result:
+            self._telemetry.capture("search_result_opened", {"file_category": category})
         return result
 
     def open_folder(self, path):
         match, resolved = self._known_file(path)
         if match is None:
             return False
-        self._open_native(str(resolved.parent))
-        return True
+        return self._open_native(str(resolved.parent))
 
     def copy_path(self, path):
         match, resolved = self._known_file(path)
@@ -1068,8 +1096,9 @@ class Api:
                 subprocess.run(["pbcopy"], input=path.encode("utf-8"), check=True)
             else:
                 subprocess.run(["xclip", "-selection", "clipboard"], input=path.encode("utf-8"), check=False)
-        except Exception:
-            pass
+        except Exception as exc:
+            self._telemetry.track_error("copy_path", exc)
+            return False
         return True
 
     # -- nettoyage (onglet "Nettoyage") ----------------------------------------
@@ -1372,6 +1401,12 @@ def resource_path(*parts):
 def main():
     import webview
 
+    _diagnostic_trace("main start")
+    instance_handle = _acquire_single_instance()
+    if instance_handle is None:
+        if sys.platform == "win32":
+            ctypes.windll.user32.MessageBoxW(0, "Retrio est déjà ouvert.", APP_NAME, 0x40)
+        return 0
     if sys.platform == 'win32':
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Retrio.Desktop')
     telemetry = get_telemetry()
@@ -1401,10 +1436,20 @@ def main():
     )
     api.window = window
     threading.Thread(target=api.refresh_license, daemon=True).start()
-    if icon_path:
-        webview.start(icon=icon_path, debug=False)
-    else:
-        webview.start(debug=False)
+    _diagnostic_trace("before webview.start")
+    try:
+        if icon_path:
+            webview.start(icon=icon_path, debug=False)
+        else:
+            webview.start(debug=False)
+    finally:
+        _diagnostic_trace("webview.start returned")
+        telemetry.shutdown()
+        if sys.platform == "win32" and instance_handle:
+            ctypes.windll.kernel32.ReleaseMutex(instance_handle)
+            ctypes.windll.kernel32.CloseHandle(instance_handle)
+        _diagnostic_trace("shutdown complete")
+    return 0
 
 
 if __name__ == "__main__":

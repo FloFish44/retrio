@@ -1019,9 +1019,15 @@ function renderResults(matches, query) {
         </div>
       </div>
     `;
-    row.querySelector('[data-act="open"]').addEventListener("click", () => api().open_path(entry.path));
-    row.querySelector('[data-act="folder"]').addEventListener("click", () => api().open_folder(entry.path));
-    row.querySelector('[data-act="copy"]').addEventListener("click", () => api().copy_path(entry.path));
+    row.querySelector('[data-act="open"]').addEventListener("click", async () => {
+      if (!await api().open_path(entry.path)) alert("Impossible d’ouvrir ce fichier. Vérifiez qu’il existe encore et qu’une application compatible est installée.");
+    });
+    row.querySelector('[data-act="folder"]').addEventListener("click", async () => {
+      if (!await api().open_folder(entry.path)) alert("Impossible d’ouvrir le dossier de ce fichier.");
+    });
+    row.querySelector('[data-act="copy"]').addEventListener("click", async () => {
+      if (!await api().copy_path(entry.path)) alert("Impossible de copier le chemin de ce fichier.");
+    });
     list.appendChild(row);
   });
 }

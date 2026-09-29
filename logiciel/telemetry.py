@@ -226,6 +226,18 @@ class Telemetry:
         except Exception:
             pass
 
+    def shutdown(self):
+        """Stop the analytics worker so a closed Retrio process cannot linger."""
+        client = self._client
+        self._client = None
+        self._enabled = False
+        if client is None:
+            return
+        try:
+            client.shutdown()
+        except Exception:
+            pass
+
     # -- onboarding (une seule fois par installation) --------------------------
     def track_onboarding_started(self):
         self._track_once("onboarding_started_sent", "onboarding_started")
