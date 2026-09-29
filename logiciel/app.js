@@ -73,6 +73,7 @@ async function init() {
   bindAddFolder();
   bindAnalyze();
   bindPremium();
+  await bindTelemetryConsent();
 
   const folders = await api().get_known_folders();
   state.knownFolders = folders;
@@ -84,6 +85,31 @@ async function init() {
   api().refresh_license().then((raw) => {
     try { applyLicenseState(JSON.parse(raw)); } catch (e) {}
   }).catch(() => {});
+}
+
+async function bindTelemetryConsent() {
+  const dialog = document.getElementById("telemetryDialog");
+  const settingsBtn = document.getElementById("telemetrySettingsBtn");
+  const acceptBtn = document.getElementById("telemetryAcceptBtn");
+  const declineBtn = document.getElementById("telemetryDeclineBtn");
+  if (!dialog || !settingsBtn || !acceptBtn || !declineBtn) return;
+
+  const choose = async (enabled) => {
+    acceptBtn.disabled = true;
+    declineBtn.disabled = true;
+    try { await api().set_telemetry_consent(enabled); } catch (e) {}
+    dialog.close();
+    acceptBtn.disabled = false;
+    declineBtn.disabled = false;
+  };
+  acceptBtn.onclick = () => choose(true);
+  declineBtn.onclick = () => choose(false);
+  settingsBtn.onclick = () => dialog.showModal();
+
+  try {
+    const current = JSON.parse(await api().get_telemetry_consent());
+    if (current.consent === null) dialog.showModal();
+  } catch (e) {}
 }
 
 // -------------------- Retrio Pro (licence / abonnement) --------------------

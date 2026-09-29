@@ -12,8 +12,8 @@ import traceback
 
 APP_NAME = "Retrio"
 EXE_NAME = "RetrioWeb.exe"
-DOWNLOAD_URL = "https://github.com/FloFish44/retrio/releases/download/v0.5.1-beta/RetrioWeb.zip"
-DOWNLOAD_SHA256 = "313DB85FFD9E702B97BFB50B20F41A4FAFF72C344DFCE8DCA06B15B0A52A06B7"
+DOWNLOAD_URL = "https://github.com/FloFish44/retrio/releases/download/v0.5.2-beta/RetrioWeb.zip"
+DOWNLOAD_SHA256 = "2EB9A9EFB13C7E3B134EB024772AD5A2D44BA4501DFBA9EDB0D13EBCB2F48330"
 INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Programs" / "Retrio"
 
 
@@ -71,7 +71,7 @@ class Api:
         try:
             INSTALL_DIR.mkdir(parents=True, exist_ok=True)
             opener = urllib.request.build_opener()
-            opener.addheaders = [("User-Agent", "Retrio-Installer/0.5.1 (Windows)")]
+            opener.addheaders = [("User-Agent", "Retrio-Installer/0.5.2 (Windows)")]
             self.js("updateProgress", 5, "Connexion au téléchargement…")
             # Lire par blocs de 1 Mio évite les milliers d'appels JavaScript qui
             # saturaient la fenêtre et faisaient afficher « Ne répond pas ».

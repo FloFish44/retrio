@@ -42,15 +42,18 @@ import threading
 import uuid
 from pathlib import Path
 
-# Aucun identifiant de service n'est embarqué dans le code ou l'exécutable.
-# La télémétrie desktop reste désactivée si la variable n'est pas fournie par
-# un environnement de déploiement sécurisé.
-POSTHOG_PROJECT_API_KEY = os.environ.get("RETRIO_POSTHOG_KEY", "")
+# Le jeton projet PostHog est une clé publique d'ingestion, conçue pour les
+# applications clientes. Il ne donne aucun accès en lecture au compte ni aux
+# données. Une variable d'environnement permet de le remplacer en test.
+POSTHOG_PROJECT_API_KEY = os.environ.get(
+    "RETRIO_POSTHOG_KEY",
+    "phc_pThJPfjMxRRwQbLS9Kia2MnxS7CuJgg6U6cYuicJ2EEP",
+)
 POSTHOG_HOST = "https://us.i.posthog.com"
 
 # Tenu synchronisé avec retrio_web.APP_VERSION (passé explicitement par
 # start_session() pour éviter toute dérive entre les deux fichiers).
-_DEFAULT_APP_VERSION = "0.5.0 (bêta)"
+_DEFAULT_APP_VERSION = "0.5.2 (bêta)"
 
 
 def _data_dir() -> Path:
@@ -111,7 +114,7 @@ class Telemetry:
 
     # -- initialisation du SDK ----------------------------------------------
     def _init_client(self):
-        if not POSTHOG_PROJECT_API_KEY:
+        if not POSTHOG_PROJECT_API_KEY or _load_state().get("consent") is not True:
             return
         try:
             from posthog import Posthog
@@ -183,6 +186,8 @@ class Telemetry:
         changé depuis le dernier lancement connu)."""
         self._app_version = app_version or _DEFAULT_APP_VERSION
         self.set_is_pro(is_pro)
+        if not self._enabled:
+            return
         try:
             _distinct_id, is_first_launch = self._ensure_distinct_id()
             with self._lock:
@@ -204,6 +209,27 @@ class Telemetry:
                 _save_state(state)
         except Exception:
             pass
+
+    def get_consent(self):
+        """Retourne True/False, ou None si l'utilisateur n'a pas encore choisi."""
+        value = _load_state().get("consent")
+        return value if isinstance(value, bool) else None
+
+    def set_consent(self, enabled: bool):
+        """Active ou coupe immédiatement la télémétrie anonyme."""
+        enabled = bool(enabled)
+        state = _load_state()
+        previous = state.get("consent")
+        state["consent"] = enabled
+        _save_state(state)
+        if enabled:
+            if not self._enabled:
+                self._init_client()
+            if previous is not True:
+                self.start_session(self._app_version, self._is_pro)
+        else:
+            self.shutdown()
+        return enabled
 
     def install_crash_handler(self):
         """Intercepte les exceptions non gérées du thread principal pour

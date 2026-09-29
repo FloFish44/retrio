@@ -47,7 +47,7 @@ from retrieval import SearchIndex, search as search_by_content, evidence
 from telemetry import get_telemetry
 
 APP_NAME = "Retrio"
-APP_VERSION = "0.5.1 (bêta)"
+APP_VERSION = "0.5.2 (bêta)"
 
 
 def _diagnostic_trace(label):
@@ -902,9 +902,18 @@ class Api:
             return json.dumps(self._license_cache)
         was_premium = self._is_premium()
         try:
-            url = f"{LICENSE_API_BASE}/license/check?email={urllib.parse.quote(email)}"
-            req = urllib.request.Request(url, headers={"User-Agent": "Retrio/1.0"})
-            # The URL is built exclusively from the fixed HTTPS origin above.
+            url = f"{LICENSE_API_BASE}/license/check"
+            payload = json.dumps({"email": email}).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                method="POST",
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": f"Retrio/{APP_VERSION}",
+                },
+            )
+            # L'adresse n'apparait jamais dans l'URL ni dans les journaux HTTP.
             with urllib.request.urlopen(req, timeout=6) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
             self._license_cache.update({
@@ -926,6 +935,12 @@ class Api:
         except Exception as exc:
             self._telemetry.track_error("license_refresh", exc)
         return json.dumps(self._license_cache)
+
+    def get_telemetry_consent(self):
+        return json.dumps({"consent": self._telemetry.get_consent()})
+
+    def set_telemetry_consent(self, enabled):
+        return bool(self._telemetry.set_consent(bool(enabled)))
 
     def open_premium_checkout(self):
         self._telemetry.capture("checkout_started")
