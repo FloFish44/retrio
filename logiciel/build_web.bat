@@ -4,7 +4,7 @@ cd /d "%~dp0"
 python -m pip install -r requirements.txt pyinstaller==6.22.2
 if errorlevel 1 exit /b 1
 python -m PyInstaller --noconfirm --clean --onedir --windowed --name "RetrioWeb" --icon "icon.ico" ^
-  --add-data "app.html;." --add-data "app.css;." --add-data "app.js;." --add-data "demo-retrio.mp4;." --add-data "demo-doublons.mp4;." --add-data "demo-ranger.mp4;." --add-data "demo-nettoyage.mp4;." --add-data "fonts;fonts" ^
+  --add-data "app.html;." --add-data "app.css;." --add-data "i18n.js;." --add-data "app.js;." --add-data "demo-retrio.mp4;." --add-data "demo-doublons.mp4;." --add-data "demo-ranger.mp4;." --add-data "demo-nettoyage.mp4;." --add-data "fonts;fonts" ^
   --add-data "icon.ico;." --add-data "models;models" ^
   --collect-binaries onnxruntime --collect-data onnxruntime --copy-metadata onnxruntime ^
   --exclude-module onnxruntime.transformers --exclude-module onnxruntime.quantization --exclude-module onnxruntime.tools ^

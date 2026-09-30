@@ -18,7 +18,7 @@ const state = {
 const TEASER_FALLBACK = { doublons: "3 751", ranger: "1 858", nettoyage: "3,7 Go" };
 
 function formatFr(n) {
-  return Number(n).toLocaleString("fr-FR");
+  return Number(n).toLocaleString(window.retrioI18n ? window.retrioI18n.locale : "fr-FR");
 }
 
 function api() { return window.pywebview && window.pywebview.api; }
@@ -423,7 +423,7 @@ function renderRangerList(el) {
   const counts = rangerCounts();
   const filtered = filter === "tous" ? suggestions.slice() : suggestions.filter((s) => s.category === filter);
   const sorters = {
-    name: (a, b) => a.name.localeCompare(b.name, "fr"),
+    name: (a, b) => a.name.localeCompare(b.name, window.retrioI18n ? window.retrioI18n.language : "fr"),
     date: (a, b) => b.mtime - a.mtime,
     size: (a, b) => b.size - a.size,
   };
@@ -495,7 +495,7 @@ function renderRangerList(el) {
 function buildRangerCard(item, el) {
   const card = document.createElement("article");
   card.className = "tool-card organize-card";
-  const dateLabel = new Date(item.mtime * 1000).toLocaleDateString("fr-FR");
+  const dateLabel = new Date(item.mtime * 1000).toLocaleDateString(window.retrioI18n ? window.retrioI18n.locale : "fr-FR");
   card.innerHTML = `
     <label class="ranger-check-wrap"><input type="checkbox" class="ranger-check" data-path="${escapeHtml(item.path)}"></label>
     <div class="ranger-card-body">
