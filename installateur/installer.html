@@ -5,8 +5,21 @@ const b=document.getElementById('action'),s=document.getElementById('status'),ba
 document.getElementById('minBtn').onclick=()=>pywebview.api.minimize();
 document.getElementById('maxBtn').onclick=()=>pywebview.api.toggle_maximize();
 document.getElementById('closeBtn').onclick=()=>pywebview.api.close();
-b.onclick=async()=>{if(b.dataset.done){pywebview.api.launch();return}b.disabled=true;s.textContent='Préparation…';await pywebview.api.start_install()};
-function updateProgress(value,text){bar.style.width=value+'%';s.textContent=text}
-function installDone(){bar.style.width='100%';s.textContent='Retrio 0.5.2 est installé.';b.disabled=false;b.dataset.done='1';b.textContent='Ouvrir Retrio'}
-function installFailed(message){s.textContent='Installation impossible : '+message+' Le détail est enregistré dans le journal Retrio.';b.disabled=false;b.textContent='Réessayer'}
+b.onclick=async()=>{if(b.dataset.done){pywebview.api.launch();return}b.disabled=true;s.textContent='Préparation du téléchargement…';bar.style.width='2%';await pywebview.api.start_install()};
+let lastState='ready';
+async function refreshStatus(){
+  try{
+    const status=await pywebview.api.get_status();
+    bar.style.width=Math.max(0,Math.min(100,status.progress||0))+'%';
+    s.textContent=status.message||'';
+    if(status.state==='done'&&lastState!=='done'){
+      b.disabled=false;b.dataset.done='1';b.textContent='Ouvrir Retrio';
+    }else if(status.state==='error'&&lastState!=='error'){
+      b.disabled=false;b.textContent='Réessayer';
+      s.textContent=(status.message||'Installation impossible.')+' Le détail est enregistré dans le journal Retrio.';
+    }
+    lastState=status.state;
+  }catch(_error){}
+}
+window.setInterval(refreshStatus,250);
 </script></body></html>

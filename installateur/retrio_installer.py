@@ -1,11 +1,11 @@
 import hashlib
-import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import threading
+import time
 import urllib.request
 import zipfile
 import traceback
@@ -50,16 +50,23 @@ class Api:
         self.running = False
         self.target = None
         self._maximized = False
+        self._status_lock = threading.Lock()
+        self._status = {"state": "ready", "progress": 0,
+                        "message": "Prêt à installer la version 0.5.2."}
 
-    def js(self, function, *values):
-        if self.window:
-            args = ",".join(json.dumps(value, ensure_ascii=False) for value in values)
-            self.window.evaluate_js(f"{function}({args})")
+    def set_status(self, state, progress, message):
+        with self._status_lock:
+            self._status = {"state": state, "progress": progress, "message": message}
+
+    def get_status(self):
+        with self._status_lock:
+            return dict(self._status)
 
     def start_install(self):
         if self.running:
             return False
         self.running = True
+        self.set_status("running", 2, "Préparation du téléchargement…")
         threading.Thread(target=self.install, daemon=True).start()
         return True
 
@@ -72,44 +79,59 @@ class Api:
             INSTALL_DIR.mkdir(parents=True, exist_ok=True)
             opener = urllib.request.build_opener()
             opener.addheaders = [("User-Agent", "Retrio-Installer/0.5.2 (Windows)")]
-            self.js("updateProgress", 5, "Connexion au téléchargement…")
-            # Lire par blocs de 1 Mio évite les milliers d'appels JavaScript qui
-            # saturaient la fenêtre et faisaient afficher « Ne répond pas ».
+            self.set_status("running", 4, "Connexion au serveur Retrio…")
             with opener.open(DOWNLOAD_URL, timeout=30) as response, archive.open("wb") as destination:
                 total = int(response.headers.get("Content-Length", 0))
                 downloaded = 0
-                last_percent = -1
+                started_at = time.monotonic()
+                last_update = 0.0
                 while True:
-                    chunk = response.read(1024 * 1024)
+                    chunk = response.read(4 * 1024 * 1024)
                     if not chunk:
                         break
                     destination.write(chunk)
                     downloaded += len(chunk)
-                    percent = min(70, 5 + int(downloaded * 65 / total)) if total else 10
-                    if percent >= last_percent + 2:
-                        last_percent = percent
-                        detail = f"Téléchargement de Retrio… {downloaded // (1024 * 1024)} Mo"
-                        self.js("updateProgress", percent, detail)
+                    percent = min(68, 5 + int(downloaded * 63 / total)) if total else 12
+                    now = time.monotonic()
+                    if now - last_update >= 0.2 or (total and downloaded >= total):
+                        last_update = now
+                        speed = downloaded / max(now - started_at, 0.1) / (1024 * 1024)
+                        current_mb = downloaded / (1024 * 1024)
+                        if total:
+                            total_mb = total / (1024 * 1024)
+                            detail = f"Téléchargement… {current_mb:.0f}/{total_mb:.0f} Mo · {speed:.1f} Mo/s"
+                        else:
+                            detail = f"Téléchargement… {current_mb:.0f} Mo · {speed:.1f} Mo/s"
+                        self.set_status("running", percent, detail)
 
             digest = hashlib.sha256()
+            archive_size = max(archive.stat().st_size, 1)
+            verified = 0
             with archive.open("rb") as source:
-                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                for chunk in iter(lambda: source.read(4 * 1024 * 1024), b""):
                     digest.update(chunk)
+                    verified += len(chunk)
+                    self.set_status("running", 69 + int(verified * 6 / archive_size),
+                                    "Vérification de l’intégrité du téléchargement…")
             if digest.hexdigest().upper() != DOWNLOAD_SHA256:
                 raise RuntimeError("Le téléchargement est incomplet ou ne correspond pas à la version officielle.")
-            self.js("updateProgress", 74, "Vérification terminée…")
+            self.set_status("running", 76, "Téléchargement vérifié. Installation des fichiers…")
 
             if staging.exists():
                 shutil.rmtree(staging)
             staging.mkdir()
-            self.js("updateProgress", 78, "Installation des fichiers…")
             with zipfile.ZipFile(archive) as package:
                 base = staging.resolve()
-                for member in package.infolist():
+                members = package.infolist()
+                for index, member in enumerate(members, 1):
                     destination = (staging / member.filename).resolve()
                     if os.path.commonpath([base, destination]) != str(base):
                         raise RuntimeError("L’archive contient un chemin invalide.")
-                package.extractall(staging)
+                    package.extract(member, staging)
+                    if index == len(members) or index % 20 == 0:
+                        progress = 77 + int(index * 17 / max(len(members), 1))
+                        self.set_status("running", progress,
+                                        f"Installation des fichiers… {index}/{len(members)}")
             archive.unlink(missing_ok=True)
 
             found = next(staging.rglob(EXE_NAME), None)
@@ -123,19 +145,20 @@ class Api:
             staging.replace(current)
             self.target = current / relative_exe
 
+            self.set_status("running", 96, "Création du raccourci sur le Bureau…")
             icon = INSTALL_DIR / "retrio_icon.ico"
             shutil.copy2(resource_path("retrio_icon.ico"), icon)
             create_shortcut(desktop_path() / "Retrio.lnk", self.target, self.target.parent, icon)
             if previous.exists():
                 shutil.rmtree(previous, ignore_errors=True)
-            self.js("installDone")
+            self.set_status("done", 100, "Retrio 0.5.2 est installé.")
         except Exception as exc:
             archive.unlink(missing_ok=True)
             try:
                 (INSTALL_DIR / "installer.log").write_text(traceback.format_exc(), encoding="utf-8")
             except Exception:
                 pass
-            self.js("installFailed", str(exc))
+            self.set_status("error", 0, f"Installation impossible : {exc}")
         finally:
             self.running = False
 
