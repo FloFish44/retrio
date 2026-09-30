@@ -106,8 +106,8 @@ async function bindTelemetryConsent() {
   declineBtn.onclick = () => choose(false);
   settingsBtn.onclick = () => dialog.showModal();
 
-  // Pas de fenêtre au démarrage : la télémétrie reste désactivée par défaut.
-  // L'utilisateur peut l'activer volontairement via « Confidentialité ».
+  // Pas de fenêtre bloquante au démarrage. La mesure technique minimale est
+  // active par défaut et désactivable via « Confidentialité ».
 }
 
 // -------------------- Retrio Pro (licence / abonnement) --------------------

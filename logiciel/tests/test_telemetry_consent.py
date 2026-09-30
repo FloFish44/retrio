@@ -41,16 +41,14 @@ class TelemetryConsentTests(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def test_consent_is_required_before_events_are_sent(self):
+    def test_minimal_session_analytics_are_enabled_until_opt_out(self):
         client = telemetry.Telemetry()
-        self.assertIsNone(client.get_consent())
-        client.start_session("test")
-        self.assertEqual(FakePosthog.instances, [])
-
-        self.assertTrue(client.set_consent(True))
         self.assertTrue(client.get_consent())
+        client.start_session("test")
         self.assertEqual([event["event"] for event in FakePosthog.instances[0].events],
                          ["app_first_launch", "app_open"])
+        session_id = FakePosthog.instances[0].events[0]["distinct_id"]
+        self.assertTrue(session_id.startswith("session-"))
 
         self.assertFalse(client.set_consent(False))
         self.assertTrue(FakePosthog.instances[0].closed)

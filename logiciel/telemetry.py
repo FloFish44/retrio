@@ -28,10 +28,9 @@ Règles absolues, appliquées partout dans ce module :
      d'exception (ex. "FileNotFoundError") — jamais son message ni sa
      trace, qui peuvent contenir un chemin Windows ou un nom de fichier.
 
-  3. Un seul identifiant anonyme (UUID v4), généré une fois au premier
-     lancement, stocké localement dans %LOCALAPPDATA%\\Retrio\\telemetry.json
-     et réutilisé à chaque ouverture — jamais l'email de licence — pour
-     que PostHog puisse calculer DAU/WAU/MAU et la rétention.
+  3. Un identifiant de session aléatoire (UUID v4) est recréé à chaque
+     ouverture. Il n'est jamais stocké et ne permet pas de suivre une même
+     personne d'une session à l'autre.
 """
 
 import json
@@ -114,7 +113,7 @@ class Telemetry:
 
     # -- initialisation du SDK ----------------------------------------------
     def _init_client(self):
-        if not POSTHOG_PROJECT_API_KEY or _load_state().get("consent") is not True:
+        if not POSTHOG_PROJECT_API_KEY or _load_state().get("consent") is False:
             return
         try:
             from posthog import Posthog
@@ -143,17 +142,18 @@ class Telemetry:
             "is_pro": self._is_pro,
         }
 
-    # -- identifiant anonyme persistant --------------------------------------
+    # -- identifiant aléatoire limité à la session ---------------------------
     def _ensure_distinct_id(self):
-        """Charge (ou crée une seule fois) l'UUID anonyme persistant.
-        Retourne (distinct_id, is_first_launch)."""
+        """Crée un UUID éphémère et ne conserve qu'un booléen de première
+        ouverture, sans identifiant persistant."""
         with self._lock:
             state = _load_state()
-            is_first_launch = "distinct_id" not in state
+            is_first_launch = state.get("first_launch_recorded") is not True
+            if not self._distinct_id:
+                self._distinct_id = "session-" + str(uuid.uuid4())
             if is_first_launch:
-                state["distinct_id"] = str(uuid.uuid4())
+                state["first_launch_recorded"] = True
                 _save_state(state)
-            self._distinct_id = state["distinct_id"]
             return self._distinct_id, is_first_launch
 
     def set_is_pro(self, is_pro: bool):
@@ -211,9 +211,9 @@ class Telemetry:
             pass
 
     def get_consent(self):
-        """Retourne True/False, ou None si l'utilisateur n'a pas encore choisi."""
+        """La mesure minimale est active sauf opposition explicite."""
         value = _load_state().get("consent")
-        return value if isinstance(value, bool) else None
+        return value if isinstance(value, bool) else True
 
     def set_consent(self, enabled: bool):
         """Active ou coupe immédiatement la télémétrie anonyme."""

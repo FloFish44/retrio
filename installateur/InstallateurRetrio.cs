@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using Microsoft.Win32;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -12,7 +13,8 @@ using System.Windows.Forms;
 internal sealed class RetrioInstaller : Form
 {
     const string Url = "https://github.com/FloFish44/retrio/releases/download/v0.5.2-beta/RetrioWeb.zip";
-    const string ExpectedHash = "EB12B4E412DFD53B2E596C9E4614DE4D212B903F0EB67C25B9E3A1B140656E1D";
+    const string ExpectedHash = "2673760F89F1187E282E48CDD6E778DE0FA207C27BE3EC4F03606C8B51FF04EF";
+    const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\Retrio";
     readonly string installDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Retrio");
     readonly ProgressBar progress = new ProgressBar();
     readonly Label status = new Label();
@@ -21,6 +23,7 @@ internal sealed class RetrioInstaller : Form
 
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern bool MoveFileEx(string existing, string replacement, int flags);
 
     public RetrioInstaller()
     {
@@ -129,7 +132,11 @@ internal sealed class RetrioInstaller : Form
             string relative = found.Substring(staging.Length).TrimStart(Path.DirectorySeparatorChar);
             if (Directory.Exists(previous)) Directory.Delete(previous, true); if (Directory.Exists(current)) Directory.Move(current, previous); Directory.Move(staging, current);
             installedExe = Path.Combine(current, relative);
-            worker.ReportProgress(96, "Création du raccourci sur le Bureau…"); CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Retrio.lnk"), installedExe);
+            worker.ReportProgress(96, "Création du raccourci et du désinstalleur…");
+            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Retrio.lnk"), installedExe);
+            string uninstaller = Path.Combine(installDir, "Desinstaller_Retrio.exe");
+            File.Copy(Application.ExecutablePath, uninstaller, true);
+            RegisterUninstaller(uninstaller, installedExe, DirectorySize(installDir));
             if (Directory.Exists(previous)) Directory.Delete(previous, true);
         }
         catch { try { if (File.Exists(archive)) File.Delete(archive); } catch { } throw; }
@@ -143,6 +150,38 @@ internal sealed class RetrioInstaller : Form
 
     void SetProgress(int value, string message) { progress.Value = Math.Max(0, Math.Min(100, value)); status.Text = message; }
     static string FindFile(string root, string name) { string[] files = Directory.GetFiles(root, name, SearchOption.AllDirectories); return files.Length > 0 ? files[0] : null; }
+    static long DirectorySize(string root)
+    {
+        long total = 0; foreach (string file in Directory.GetFiles(root, "*", SearchOption.AllDirectories)) try { total += new FileInfo(file).Length; } catch { }
+        return total;
+    }
+    static void RegisterUninstaller(string uninstaller, string app, long bytes)
+    {
+        using (RegistryKey key = Registry.CurrentUser.CreateSubKey(UninstallKey))
+        {
+            key.SetValue("DisplayName", "Retrio"); key.SetValue("DisplayVersion", "0.5.2"); key.SetValue("Publisher", "Retrio");
+            key.SetValue("DisplayIcon", app); key.SetValue("InstallLocation", Path.GetDirectoryName(app));
+            key.SetValue("UninstallString", "\"" + uninstaller + "\" --uninstall");
+            key.SetValue("NoModify", 1, RegistryValueKind.DWord); key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+            key.SetValue("EstimatedSize", (int)Math.Min(Int32.MaxValue, bytes / 1024), RegistryValueKind.DWord);
+        }
+    }
+    static void Uninstall()
+    {
+        DialogResult answer = MessageBox.Show("Voulez-vous désinstaller Retrio ?\r\n\r\nVos documents et photos ne seront jamais supprimés.", "Désinstaller Retrio", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (answer != DialogResult.Yes) return;
+        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Retrio");
+        try
+        {
+            foreach (string folder in new[] { "app", "app-new", "app-previous" }) { string path = Path.Combine(root, folder); if (Directory.Exists(path)) Directory.Delete(path, true); }
+            string shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Retrio.lnk"); if (File.Exists(shortcut)) File.Delete(shortcut);
+            foreach (string file in new[] { "retrio_icon.ico", "installer.log", "retrio-download.zip" }) { string path = Path.Combine(root, file); if (File.Exists(path)) File.Delete(path); }
+            Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
+            MoveFileEx(Application.ExecutablePath, null, 4);
+            MessageBox.Show("Retrio a été désinstallé.\r\nVos fichiers personnels n’ont pas été modifiés.", "Retrio", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception error) { MessageBox.Show("La désinstallation n’a pas pu se terminer : " + error.Message, "Retrio", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+    }
     static void CreateShortcut(string shortcut, string target)
     {
         string s = shortcut.Replace("'", "''"), t = target.Replace("'", "''"), d = Path.GetDirectoryName(target).Replace("'", "''");
@@ -151,9 +190,10 @@ internal sealed class RetrioInstaller : Form
         if (p.ExitCode != 0) throw new InvalidOperationException("Impossible de créer le raccourci Retrio.");
     }
 
-    [STAThread] static void Main()
+    [STAThread] static void Main(string[] args)
     {
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        if (args.Length > 0 && args[0].Equals("--uninstall", StringComparison.OrdinalIgnoreCase)) { Uninstall(); return; }
         Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false); Application.Run(new RetrioInstaller());
     }
 }
