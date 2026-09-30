@@ -114,6 +114,21 @@
     if (location.pathname.endsWith("/telecharger.html")) capture("download_page_view");
   }
 
+  function startInstallerDownload() {
+    var path = location.pathname.replace(/\/+$/, "");
+    if (path !== "/telecharger.html" && path !== "/en/download.html") return;
+    window.setTimeout(function () {
+      var link = document.createElement("a");
+      link.href = "/downloads/Installateur_Retrio.exe";
+      link.download = "Installateur_Retrio.exe";
+      link.hidden = true;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      capture("installer_download_started", { automatic: true });
+    }, 400);
+  }
+
   function setConsent(accepted) {
     localStorage.setItem(CONSENT_KEY, accepted ? "yes" : "no");
     var banner = document.getElementById("retrio-consent");
@@ -139,6 +154,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     addLanguageSwitch();
+    startInstallerDownload();
     var consent = localStorage.getItem(CONSENT_KEY);
     if (consent === "yes") recordPageView();
     else if (consent !== "no") showConsent();
