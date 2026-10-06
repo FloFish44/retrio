@@ -3,9 +3,9 @@
 <head><meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; media-src 'self'; connect-src 'self' https://us.i.posthog.com; frame-src https://buy.stripe.com; base-uri 'self'; form-action 'self' https://buy.stripe.com; object-src 'none'">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Retrio Pro — Débloquez toutes les fonctions</title>
+<title>Retrio Pro — 9,99 € par mois, 15 jours offerts</title>
 <link rel="icon" type="image/png" href="./favicon.png" />
-<meta name="description" content="Retrio Pro : rangement et renommage proposés, doublons exacts et nettoyage sans limite. 4,99€/mois, sans engagement." />
+<meta name="description" content="Retrio Pro : 9,99 € par mois, sans engagement. 15 jours offerts en créant un compte avec votre adresse e-mail. Rangement, doublons et nettoyage sans limite." />
 <meta name="robots" content="index,follow" />
 <meta name="theme-color" content="#1B4332" />
 <link rel="canonical" href="https://retrio.eu/retrio-pro.html" />
@@ -28,8 +28,8 @@
   .pro-price-tag .amount{font-size:1.5rem;font-family:'Fraunces',serif}
   .pro-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:46px 0}
   .pro-feature{background:#FBF8F0;border:1px solid #DED4BC;border-radius:16px;padding:14px 14px 22px;display:flex;flex-direction:column;gap:18px}
-  .pro-illustration{aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:16px}
-  .pro-feature-body{padding:0 10px}
+  .pro-illustration{aspect-ratio:16/9;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:16px}
+  .pro-feature-body{padding:0 10px;text-align:left}.pro-feature-body .lim,.pro-feature-body .ok{margin-top:8px;margin-right:6px}
   .pro-feature h3{margin:0 0 8px;font-family:'Fraunces',serif;font-size:1.05rem;color:#1B4332}
   .pro-feature p{margin:0;color:#4C5A50;font-size:.92rem;line-height:1.6}
   .pro-cta-box{background:#1B4332;color:#F5F1E6;border-radius:22px;padding:44px 32px;text-align:center;margin:50px 0}
@@ -40,6 +40,39 @@
   .pro-faq summary{cursor:pointer;font-weight:600;color:#1B4332}
   .pro-faq p{color:#4C5A50;font-size:.92rem;line-height:1.6;margin:10px 0 0}
   @media(max-width:700px){.pro-grid{grid-template-columns:1fr}header nav>a:not(.btn){display:none}}
+  .pro-eyebrow{display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#896119;margin-bottom:14px}
+  .price-hero{display:flex;flex-direction:column;align-items:center;gap:10px;margin:6px 0 8px}
+  .price-big{font-family:'Fraunces',Georgia,serif;font-weight:700;color:#1B4332;line-height:1;font-size:clamp(3.2rem,9vw,5.6rem)}
+  .price-big small{font-size:.38em;font-weight:600;color:#4C5A50;font-family:'Inter',sans-serif;margin-left:6px}
+  .price-sub{font-weight:700;color:#14251C;font-size:1.1rem}
+  .trial-pill{display:inline-block;background:#1B4332;color:#F5F1E6;border-radius:999px;padding:11px 24px;font-weight:700;font-size:1.02rem;margin-top:6px}
+  .section-title{font-size:clamp(1.6rem,3vw,2.1rem);margin:70px 0 12px}
+  .section-lead{max-width:640px;margin:0 auto 30px;color:#4C5A50;line-height:1.65}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;text-align:left;margin-top:26px}
+  .step{background:#FBF8F0;border:1px solid #DED4BC;border-radius:16px;padding:22px}
+  .step .num{width:34px;height:34px;border-radius:50%;background:#1B4332;color:#F5F1E6;display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:12px}
+  .step h3{margin:0 0 6px;font-family:'Fraunces',serif;font-size:1.08rem;color:#1B4332}
+  .step p{margin:0;color:#4C5A50;font-size:.93rem;line-height:1.6}
+  .compare{width:100%;max-width:860px;margin:10px auto 0;border-collapse:separate;border-spacing:0;background:#FBF8F0;border:1px solid #DED4BC;border-radius:18px;overflow:hidden;text-align:left}
+  .compare th,.compare td{padding:16px 20px;border-bottom:1px solid #E7DFC9;font-size:.95rem}
+  .compare tr:last-child td{border-bottom:none}
+  .compare thead th{background:#F1EBDA;font-family:'Fraunces',serif;font-size:1rem;color:#14251C}
+  .compare thead th.pro{background:#1B4332;color:#F5F1E6}
+  .compare td.pro{background:#EEF5EF;font-weight:700;color:#1B4332}
+  .compare td.free{color:#6A5A3A}
+  .lim{display:inline-block;background:#F3E3C6;color:#8A5A12;border-radius:999px;padding:3px 10px;font-size:.82rem;font-weight:700}
+  .ok{color:#1B4332;font-weight:800}
+  .fomo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;text-align:left;margin-top:24px}
+  .fomo div{background:#FBF8F0;border:1px solid #DED4BC;border-left:4px solid #C9A24A;border-radius:14px;padding:20px}
+  .fomo strong{display:block;font-family:'Fraunces',serif;color:#1B4332;font-size:1.05rem;margin-bottom:6px}
+  .fomo p{margin:0;color:#4C5A50;font-size:.92rem;line-height:1.6}
+  .reassure{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px;text-align:left}
+  .reassure div{padding:4px 6px;color:#4C5A50;font-size:.93rem;line-height:1.6}
+  .reassure b{display:block;color:#1B4332;font-size:1rem;margin-bottom:4px}
+  .btn-ghost{background:transparent;color:#1B4332;border:1.5px solid #1B4332}
+  .btn-ghost:hover{background:#1B4332;color:#F5F1E6}
+  @media(max-width:700px){.steps,.fomo,.reassure{grid-template-columns:1fr}.compare th,.compare td{padding:12px 12px;font-size:.88rem}}
+
 </style>
 <script src="/assets/site.js" defer></script><meta name="referrer" content="strict-origin-when-cross-origin"><meta property="og:image" content="https://retrio.eu/assets/retrio-social-preview.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://retrio.eu/assets/retrio-social-preview.jpg"><link rel="alternate" hreflang="fr" href="https://retrio.eu/retrio-pro.html" />
 <link rel="alternate" hreflang="en" href="https://retrio.eu/en/retrio-pro.html" />
@@ -62,14 +95,50 @@
 </header>
 
 <main class="wrap pro-hero">
-  <div class="pro-price-tag"><span class="amount">4,99 €</span><span>/ mois, sans engagement</span></div>
-  <h1 style="font-size:clamp(2.1rem,4.4vw,3.1rem);margin:0 0 16px">Passez à Retrio Pro</h1>
-  <p style="max-width:640px;margin:0 auto;color:#4C5A50;font-size:1.05rem;line-height:1.65">Débloquez sans limite les propositions de rangement, les doublons exacts et le nettoyage approfondi. Vous gardez la main avant chaque déplacement ou suppression. Résiliable à tout moment depuis votre espace Stripe.</p>
-  <div style="margin-top:30px">
-    <a class="btn" href="https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00" target="_blank" rel="noopener" style="background:#1B4332;color:#F5F1E6;padding:17px 34px;font-size:1rem">S'abonner — 4,99 €/mois</a>
+  <span class="pro-eyebrow">Retrio Pro</span>
+  <h1 style="font-size:clamp(1.9rem,3.8vw,2.7rem);margin:0 0 6px">Tout Retrio, sans aucune limite</h1>
+  <div class="price-hero">
+    <div class="price-big">9,99 €<small>par mois</small></div>
+    <div class="price-sub">Sans engagement. Résiliable à tout moment.</div>
+    <div class="trial-pill">15 jours offerts si vous vous inscrivez via une adresse e-mail</div>
+  </div>
+  <p style="max-width:660px;margin:18px auto 0;color:#4C5A50;font-size:1.04rem;line-height:1.65">Entrez votre adresse e-mail dans Retrio : votre compte est créé et vous profitez de <strong>15 jours de Retrio Pro gratuits</strong>, sans carte bancaire. Ensuite, c'est 9,99 € par mois si vous voulez continuer. Sinon, vous gardez la version gratuite.</p>
+  <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a class="btn" href="./telecharger.html" style="background:#1B4332;color:#F5F1E6;padding:17px 34px;font-size:1rem">Télécharger Retrio et démarrer mes 15 jours</a>
+    <a class="btn btn-ghost" href="https://buy.stripe.com/9B614o0bp7Ki2USby9dnW01" target="_blank" rel="noopener" style="padding:15px 30px;font-size:1rem">S'abonner directement — 9,99 €/mois</a>
   </div>
   <p style="margin-top:14px;font-size:.85rem;color:#5B7364">Paiement sécurisé par Stripe. Retrio ne stocke jamais vos données de carte bancaire.</p>
 
+  <h2 class="section-title">Comment ça marche ?</h2>
+  <p class="section-lead">Trois étapes, moins de deux minutes. Aucune carte bancaire pour l'essai.</p>
+  <div class="steps">
+    <div class="step"><div class="num">1</div><h3>Vous entrez votre e-mail</h3><p>Au premier lancement de Retrio, cliquez sur « Se connecter », saisissez votre adresse e-mail et le code à 6 chiffres reçu. Votre compte est créé.</p></div>
+    <div class="step"><div class="num">2</div><h3>15 jours offerts</h3><p>Rangement, doublons et nettoyage sont débloqués sans limite pendant 15 jours. Nous vous prévenons 5 jours avant la fin.</p></div>
+    <div class="step"><div class="num">3</div><h3>Ensuite, c'est vous qui décidez</h3><p>Vous continuez pour 9,99 € par mois, sans engagement. Sinon, rien n'est prélevé : Retrio repasse simplement en version gratuite.</p></div>
+  </div>
+
+  <h2 class="section-title">Retrio classique ou Retrio Pro ?</h2>
+  <p class="section-lead">La recherche reste gratuite. Pro lève les limites là où vous gagnez vraiment du temps.</p>
+  <table class="compare">
+    <thead><tr><th></th><th>Retrio classique</th><th class="pro">Retrio Pro</th></tr></thead>
+    <tbody>
+      <tr><td>Recherche de fichiers avec vos mots</td><td class="free"><span class="ok">Illimitée</span></td><td class="pro">Illimitée</td></tr>
+      <tr><td>Rangement et renommage proposés</td><td class="free"><span class="lim">30 fichiers</span></td><td class="pro">Sans limite</td></tr>
+      <tr><td>Doublons exacts</td><td class="free"><span class="lim">10 doublons</span></td><td class="pro">Sans limite</td></tr>
+      <tr><td>Nettoyage approfondi de l'espace disque</td><td class="free"><span class="lim">10 éléments</span></td><td class="pro">Sans limite</td></tr>
+      <tr><td>Vos fichiers restent sur votre ordinateur</td><td class="free"><span class="ok">Oui</span></td><td class="pro">Oui</td></tr>
+      <tr><td>Prix</td><td class="free">Gratuit</td><td class="pro">9,99 € / mois, sans engagement</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">Pourquoi passer à Pro ?</h2>
+  <div class="fomo">
+    <div><strong>Ne vous arrêtez plus à mi-chemin</strong><p>En version classique, le rangement s'arrête au 30e fichier et les doublons au 10e. Le reste de votre désordre attend. Avec Pro, vous finissez le travail en une seule fois.</p></div>
+    <div><strong>Récupérez de l'espace pour de bon</strong><p>Doublons, fichiers temporaires, vieux téléchargements : Pro vous laisse tout nettoyer, pas seulement un échantillon, en gardant la main avant chaque suppression.</p></div>
+    <div><strong>Moins de 0,34 € par jour</strong><p>9,99 € par mois, soit moins de 34 centimes par jour, pour ne plus jamais perdre de temps à chercher ou à trier à la main.</p></div>
+  </div>
+
+  <h2 class="section-title">Ce que Pro débloque</h2>
   <div class="pro-grid">
     <div class="pro-feature">
       <div class="pro-illustration" style="background:#E7EFE7">
@@ -90,7 +159,7 @@
       </div>
       <div class="pro-feature-body">
         <h3>Rangement et renommage proposés</h3>
-        <p>Retrio propose un nom plus clair pour les documents mal nommés et un classement par type ou par date, avant votre validation.</p>
+        <p>Retrio propose un nom plus clair pour les documents mal nommés et un classement par type ou par date, avant votre validation.<br><span class="lim">Gratuit : 30 fichiers</span> <span class="ok">Pro : illimité</span></p>
       </div>
     </div>
 
@@ -116,7 +185,7 @@
       </div>
       <div class="pro-feature-body">
         <h3>Classement sans limite</h3>
-        <p>Validez autant de propositions de classement que nécessaire, une par une ou par sélection.</p>
+        <p>Validez autant de propositions de classement que nécessaire, une par une ou par sélection : tout votre dossier Documents, d'un coup.</p>
       </div>
     </div>
 
@@ -134,7 +203,7 @@
       </div>
       <div class="pro-feature-body">
         <h3>Doublons exacts, sans limite</h3>
-        <p>Repérez les fichiers strictement identiques, choisissez la copie à conserver et envoyez les autres à la corbeille.</p>
+        <p>Repérez les fichiers strictement identiques, choisissez la copie à conserver et envoyez les autres à la corbeille.<br><span class="lim">Gratuit : 10 doublons</span> <span class="ok">Pro : illimité</span></p>
       </div>
     </div>
 
@@ -156,21 +225,40 @@
       </div>
       <div class="pro-feature-body">
         <h3>Nettoyage approfondi, sans limite</h3>
-        <p>Analysez les fichiers temporaires, gros fichiers anciens, téléchargements oubliés, quasi-doublons de documents et photos en rafale.</p>
+        <p>Analysez les fichiers temporaires, gros fichiers anciens, téléchargements oubliés, quasi-doublons de documents et photos en rafale.<br><span class="lim">Gratuit : 10 éléments</span> <span class="ok">Pro : illimité</span></p>
       </div>
     </div>
   </div>
 
+  <h2 class="section-title">Vraiment sans engagement</h2>
+  <div class="reassure">
+    <div><b>Aucune carte pour l'essai</b>Vos 15 jours offerts ne demandent aucun moyen de paiement. Aucun prélèvement surprise.</div>
+    <div><b>Résiliable en un clic</b>Si vous vous abonnez, vous pouvez arrêter à tout moment depuis le lien de gestion envoyé par Stripe.</div>
+    <div><b>Vos fichiers ne bougent pas</b>Si vous arrêtez, Retrio repasse en version gratuite. Vos documents restent chez vous, intacts.</div>
+  </div>
+
   <div class="pro-cta-box">
-    <h2>Prêt à gagner du temps ?</h2>
-    <p>4,99 € par mois. Annulable à tout moment, sans engagement.</p>
-    <a class="btn" href="https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00" target="_blank" rel="noopener" style="background:#F5F1E6;color:#14251C;padding:16px 30px;font-size:.98rem">S'abonner maintenant</a>
+    <h2>Commencez par 15 jours offerts</h2>
+    <p>Ensuite 9,99 € par mois, sans engagement. Annulable à tout moment.</p>
+    <a class="btn" href="./telecharger.html" style="background:#F5F1E6;color:#14251C;padding:16px 30px;font-size:.98rem">Télécharger Retrio</a>
   </div>
 
   <div class="pro-faq">
     <details>
-      <summary>Comment activer Retrio Pro dans le logiciel ?</summary>
-      <p>Une fois abonné, ouvrez Retrio, cliquez sur « Découvrir » dans la barre latérale, puis « Vous êtes déjà abonné » et indiquez l'email utilisé lors du paiement. Les fonctions Pro se débloquent immédiatement.</p>
+      <summary>Comment obtenir mes 15 jours offerts ?</summary>
+      <p>Téléchargez Retrio, ouvrez-le et cliquez sur « Se connecter ». Saisissez votre adresse e-mail, acceptez les conditions d'utilisation, puis entrez le code à 6 chiffres reçu par e-mail. Vos 15 jours de Retrio Pro démarrent immédiatement, sans carte bancaire.</p>
+    </details>
+    <details>
+      <summary>Que se passe-t-il à la fin des 15 jours ?</summary>
+      <p>Cinq jours avant la fin, Retrio vous prévient. Sans abonnement, vous repassez simplement en version gratuite : rien n'est prélevé. Pour continuer sans limite, abonnez-vous pour 9,99 € par mois.</p>
+    </details>
+    <details>
+      <summary>Puis-je refaire un essai avec une autre adresse e-mail ?</summary>
+      <p>Non. Pour éviter les abus, un seul essai gratuit est accordé par connexion Internet et par ordinateur. Une empreinte chiffrée de votre connexion est conservée à cet effet, jamais votre adresse IP en clair.</p>
+    </details>
+    <details>
+      <summary>Comment activer Retrio Pro si je m'abonne directement ?</summary>
+      <p>Une fois abonné, ouvrez Retrio, connectez-vous avec l'adresse e-mail utilisée lors du paiement (ou cliquez sur « Découvrir » puis « Vérifier mon abonnement »). Les fonctions Pro se débloquent immédiatement.</p>
     </details>
     <details>
       <summary>Comment résilier mon abonnement ?</summary>
@@ -178,7 +266,7 @@
     </details>
     <details>
       <summary>Mes fichiers sont-ils envoyés sur Internet ?</summary>
-      <p>Non. L'analyse et la recherche restent 100 % locales. Seul le statut de votre abonnement est vérifié en ligne, via votre email.</p>
+      <p>Non. L'analyse et la recherche restent 100 % locales. Seuls votre adresse e-mail et le statut de votre essai ou abonnement sont vérifiés en ligne.</p>
     </details>
   </div>
 </main>

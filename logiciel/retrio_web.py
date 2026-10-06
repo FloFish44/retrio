@@ -23,6 +23,9 @@ import csv
 import ctypes
 import difflib
 import hashlib
+import platform
+import uuid
+from datetime import timezone
 import io
 import json
 import os
@@ -31,6 +34,7 @@ import sys
 import subprocess
 import shutil
 import threading
+import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -655,7 +659,13 @@ PREMIUM_UNLIMITED = 10**9
 
 # -- licence Retrio Pro (Stripe + service de licence Cloudflare) ------------
 LICENSE_API_BASE = "https://retrio-license.retrio-pro.workers.dev"
-PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00"  # lien de PRODUCTION Stripe
+PREMIUM_CHECKOUT_URL = "https://buy.stripe.com/9B614o0bp7Ki2USby9dnW01"  # lien de PRODUCTION Stripe, 9,99 EUR/mois
+
+# -- compte Retrio (inscription par e-mail + essai gratuit de 15 jours) -----
+BACKEND_API_BASE = "https://retrio-backend.onrender.com"
+TRIAL_DAYS = 15
+REMINDER_DAYS = 5  # rappel affiche quand il reste 5 jours ou moins d'essai
+ALLOWED_OPEN_URL_PREFIXES = ("https://retrio.eu/", "https://www.retrio.eu/")
 
 # Sections génériques de l'app pouvant déclencher la mise en avant Premium
 # (mêmes clés que l'attribut data-tab de app.html). Sert uniquement à
@@ -868,7 +878,8 @@ class Api:
                     return data
         except Exception:
             pass
-        return {"email": "", "premium": False, "status": "none", "updated_at": None}
+        return {"email": "", "premium": False, "status": "none", "updated_at": None,
+                "welcome_done": False, "account": None, "last_reminder_day": ""}
 
     def _save_license_cache(self):
         try:
@@ -877,12 +888,74 @@ class Api:
         except Exception:
             pass
 
-    def _is_premium(self):
+    def _cf_premium(self):
+        """Abonnement paye verifie par le service Cloudflare (ancien systeme, toujours actif)."""
         return bool(self._license_cache.get("premium"))
+
+    @staticmethod
+    def _parse_iso(value):
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except Exception:
+            return None
+
+    def _account_info(self):
+        """Etat du compte Retrio (essai gratuit 15 jours ou abonnement), calcule localement."""
+        acct = self._license_cache.get("account") or {}
+        info = {"has_account": bool(acct.get("token")), "account_email": acct.get("email", ""),
+                "license_kind": "none", "days_left": 0, "active": False}
+        lic = acct.get("license") or {}
+        if not lic:
+            return info
+        ends = self._parse_iso(lic.get("ends_at")) if lic.get("ends_at") else None
+        now = datetime.now(timezone.utc)
+        is_trial = str(lic.get("type", "")).startswith("trial")
+        status_ok = lic.get("status") == "active"
+        not_expired = (ends is None) or (now < ends)
+        info["active"] = bool(status_ok and not_expired)
+        info["license_kind"] = "trial" if is_trial else "paid"
+        if ends is not None:
+            # Arrondi au jour le plus proche (tolere un leger decalage d'horloge entre le PC et le serveur) ;
+            # au minimum 1 jour tant que l'acces est actif.
+            remaining = (ends - now).total_seconds()
+            days = int(round(remaining / 86400.0))
+            info["days_left"] = max(1, days) if remaining > 0 else 0
+        if is_trial and not info["active"]:
+            info["license_kind"] = "trial_expired"
+        return info
+
+    def _is_premium(self):
+        return self._cf_premium() or bool(self._account_info()["active"])
 
     def get_license_state(self):
         """Retourne l'etat de licence en cache (aucun appel reseau : instantane)."""
-        return json.dumps(self._license_cache)
+        c = self._license_cache
+        info = self._account_info()
+        today = datetime.now().strftime("%Y-%m-%d")
+        trial_running = info["license_kind"] == "trial" and info["active"]
+        reminder = bool(trial_running and not self._cf_premium() and 0 < info["days_left"] <= REMINDER_DAYS)
+        state = {
+            "email": c.get("email", ""),
+            "premium": self._is_premium(),
+            "status": c.get("status", "none"),
+            "welcome_done": bool(c.get("welcome_done")),
+            "has_account": info["has_account"],
+            "account_email": info["account_email"],
+            "license_kind": "paid" if self._cf_premium() else info["license_kind"],
+            "days_left": info["days_left"],
+            "reminder": reminder,
+            "reminder_popup": bool(reminder and c.get("last_reminder_day") != today),
+            "trial_days": TRIAL_DAYS,
+        }
+        return json.dumps(state)
+
+    def ack_reminder(self):
+        self._license_cache["last_reminder_day"] = datetime.now().strftime("%Y-%m-%d")
+        self._save_license_cache()
+        return True
 
     def set_license_email(self, email):
         """Associe cet email a l'appareil puis verifie immediatement l'abonnement."""
@@ -894,13 +967,14 @@ class Api:
         """Interroge le service de licence (Cloudflare) pour rafraichir le statut Premium.
         Si hors ligne ou en erreur : on garde le dernier statut connu, l'appli reste
         utilisable (fonctionnement 100% local pour la recherche elle-meme)."""
+        self._refresh_account()
         email = self._license_cache.get("email", "")
         if not email:
             self._license_cache.update({"premium": False, "status": "none"})
             self._save_license_cache()
-            self._telemetry.set_is_pro(False)
-            return json.dumps(self._license_cache)
-        was_premium = self._is_premium()
+            self._telemetry.set_is_pro(self._is_premium())
+            return self.get_license_state()
+        was_premium = self._cf_premium()
         try:
             url = f"{LICENSE_API_BASE}/license/check"
             payload = json.dumps({"email": email}).encode("utf-8")
@@ -926,15 +1000,124 @@ class Api:
             # serveur de licence (jamais une supposition locale) : c'est
             # la seule source d'information fiable sur l'état réel de
             # l'abonnement.
-            is_premium_now = self._is_premium()
-            self._telemetry.set_is_pro(is_premium_now)
+            is_premium_now = self._cf_premium()
+            self._telemetry.set_is_pro(self._is_premium())
             if is_premium_now and not was_premium:
                 self._telemetry.capture("subscription_started")
             elif was_premium and not is_premium_now:
                 self._telemetry.capture("subscription_cancelled")
         except Exception as exc:
             self._telemetry.track_error("license_refresh", exc)
-        return json.dumps(self._license_cache)
+        return self.get_license_state()
+
+    # -- compte Retrio (e-mail + code, essai gratuit 15 jours) ---------------
+    def _device_hash(self):
+        """Empreinte stable de cet ordinateur (non reversible) : sert a limiter les essais gratuits."""
+        raw = f"{uuid.getnode()}|{platform.node()}|retrio"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def _backend_call(self, method, path, payload=None, token=None, timeout=75):
+        """Appel HTTPS vers le backend Retrio. Timeout long : le serveur gratuit met
+        jusqu'a ~1 minute a se reveiller. Retourne (status_http, dict_json)."""
+        url = BACKEND_API_BASE + path
+        headers = {"User-Agent": "Retrio/1.0", "Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = "Bearer " + token
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            # URL construite uniquement a partir de l'origine HTTPS fixe ci-dessus.
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
+                return resp.status, json.loads(resp.read().decode("utf-8") or "{}")
+        except urllib.error.HTTPError as err:
+            try:
+                body = json.loads(err.read().decode("utf-8") or "{}")
+            except Exception:
+                body = {}
+            return err.code, body
+
+    def _refresh_account(self):
+        """Met a jour l'etat de l'essai / de l'abonnement depuis le serveur (si connecte)."""
+        acct = self._license_cache.get("account") or {}
+        token = acct.get("token")
+        if not token:
+            return
+        try:
+            status, body = self._backend_call("GET", "/api/account/status", token=token, timeout=75)
+            if status == 200:
+                acct["license"] = body.get("license")
+                acct["email"] = body.get("email", acct.get("email", ""))
+                acct["session_expired"] = False
+                self._license_cache["account"] = acct
+                self._save_license_cache()
+            elif status == 401:
+                acct["session_expired"] = True
+                self._license_cache["account"] = acct
+                self._save_license_cache()
+        except Exception as exc:
+            self._telemetry.track_error("account_refresh", exc)
+
+    def welcome_continue_as_guest(self):
+        """L'utilisateur choisit 'Continuer en tant qu'invite' : version gratuite, sans compte."""
+        self._license_cache["welcome_done"] = True
+        self._save_license_cache()
+        return self.get_license_state()
+
+    def request_login_code(self, email, consent_marketing=False):
+        """Etape 1 : envoie un code de verification par e-mail."""
+        email = (email or "").strip().lower()
+        try:
+            status, body = self._backend_call("POST", "/api/auth/request-code", {
+                "email": email,
+                "consentCguBeta": True,
+                "consentMarketing": bool(consent_marketing),
+            })
+        except Exception:
+            return json.dumps({"ok": False, "error": "Connexion impossible pour le moment. Verifiez votre connexion Internet puis reessayez."})
+        if status == 200 and body.get("ok"):
+            return json.dumps({"ok": True})
+        return json.dumps({"ok": False, "error": body.get("error") or "Une erreur est survenue. Reessayez dans un instant.",
+                           "code": body.get("code", "")})
+
+    def verify_login_code(self, email, code):
+        """Etape 2 : valide le code, cree la session et active l'essai de 15 jours."""
+        email = (email or "").strip().lower()
+        code = (code or "").strip()
+        try:
+            status, body = self._backend_call("POST", "/api/auth/verify-code", {
+                "email": email, "code": code, "deviceHash": self._device_hash(),
+            })
+        except Exception:
+            return json.dumps({"ok": False, "error": "Connexion impossible pour le moment. Reessayez."})
+        if status != 200 or not body.get("ok"):
+            return json.dumps({"ok": False, "error": body.get("error") or "Code invalide."})
+        self._license_cache["account"] = {"email": email, "token": body.get("token"), "license": None}
+        self._license_cache["welcome_done"] = True
+        if not self._license_cache.get("email"):
+            self._license_cache["email"] = email  # permet aussi la verification d'un abonnement existant
+        self._save_license_cache()
+        self._refresh_account()
+        self._telemetry.set_is_pro(self._is_premium())
+        return json.dumps({"ok": True, "trial_denied": bool(body.get("trialDenied")),
+                           "message": body.get("message") or "", "state": json.loads(self.get_license_state())})
+
+    def logout_account(self):
+        self._license_cache["account"] = None
+        self._license_cache["welcome_done"] = False
+        self._save_license_cache()
+        self._telemetry.set_is_pro(self._is_premium())
+        return self.get_license_state()
+
+    def open_url(self, url):
+        """Ouvre uniquement des pages du site Retrio dans le navigateur."""
+        url = str(url or "")
+        if url.startswith(ALLOWED_OPEN_URL_PREFIXES):
+            try:
+                webbrowser.open(url)
+                return True
+            except Exception:
+                return False
+        return False
 
     def get_telemetry_consent(self):
         return json.dumps({"consent": self._telemetry.get_consent()})

@@ -74,6 +74,7 @@ async function init() {
   bindAnalyze();
   bindPremium();
   await bindTelemetryConsent();
+  bindWelcome();
 
   const folders = await api().get_known_folders();
   state.knownFolders = folders;
@@ -82,6 +83,7 @@ async function init() {
   try {
     applyLicenseState(JSON.parse(await api().get_license_state()));
   } catch (e) {}
+  if (!licenseState.welcome_done) showWelcome('choice');
   api().refresh_license().then((raw) => {
     try { applyLicenseState(JSON.parse(raw)); } catch (e) {}
   }).catch(() => {});
@@ -111,7 +113,7 @@ async function bindTelemetryConsent() {
 }
 
 // -------------------- Retrio Pro (licence / abonnement) --------------------
-let licenseState = { email: "", premium: false, status: "none" };
+let licenseState = { email: "", premium: false, status: "none", welcome_done: true, has_account: false, license_kind: "none", days_left: 0 };
 let previewAsFree = false;
 
 function bindPremium() {
@@ -167,7 +169,8 @@ function bindPremium() {
 
 function applyLicenseState(data) {
   if (!data) return;
-  licenseState = data;
+  licenseState = Object.assign({}, licenseState, data);
+  data = licenseState;
   if (!data.premium) previewAsFree = false;
   const title = document.getElementById("proCardTitle");
   const sub = document.getElementById("proCardSub");
@@ -176,14 +179,178 @@ function applyLicenseState(data) {
   const emailInput = document.getElementById("proEmailInput");
   if (emailInput && data.email && !emailInput.value) emailInput.value = data.email;
   if (!title || !sub || !discoverBtn || !activeMsg) return;
+  const kind = data.license_kind;
   if (data.premium) {
     title.hidden = true; sub.hidden = true; discoverBtn.hidden = true;
     activeMsg.hidden = false;
+    activeMsg.textContent = kind === "trial"
+      ? "Essai Retrio Pro offert : " + data.days_left + " jour" + (data.days_left > 1 ? "s" : "") + " restant" + (data.days_left > 1 ? "s" : "")
+      : "Retrio Pro actif — merci !";
   } else {
     title.hidden = false; sub.hidden = false; discoverBtn.hidden = false;
     activeMsg.hidden = true;
+    if (kind === "trial_expired") {
+      title.textContent = "Votre essai gratuit est terminé";
+      sub.textContent = "Gardez toutes les fonctionnalités pour 9,99 € par mois, sans engagement.";
+    } else {
+      title.textContent = "Passer à Retrio Pro";
+      sub.textContent = "9,99 € par mois sans engagement. 15 jours offerts avec un compte.";
+    }
   }
+  // Compte
+  const accEmail = document.getElementById("accountEmail");
+  const accBtn = document.getElementById("accountBtn");
+  if (accEmail && accBtn) {
+    accEmail.textContent = data.has_account ? data.account_email : "";
+    accBtn.textContent = data.has_account ? "Se déconnecter" : "Se connecter";
+  }
+  // Dialogue Pro : l'offre d'essai n'a de sens que sans compte
+  const trialLine = document.getElementById("proTrialLine");
+  const trialBtn = document.getElementById("proTrialBtn");
+  if (trialLine && trialBtn) {
+    trialLine.hidden = !!data.has_account;
+    trialBtn.hidden = !!data.has_account;
+  }
+  refreshTrialBanner();
   refreshPreviewUI();
+}
+
+let trialBannerDismissed = false;
+function refreshTrialBanner() {
+  const banner = document.getElementById("trialBanner");
+  const text = document.getElementById("trialBannerText");
+  if (!banner || !text) return;
+  const d = licenseState;
+  let msg = "";
+  if (d.reminder) {
+    msg = "Attention, votre accès va expirer. N'hésitez pas à vous abonner pour seulement 9,99 € par mois.";
+  } else if (d.license_kind === "trial_expired" && !d.premium) {
+    msg = "Votre essai gratuit est terminé. Retrouvez toutes les fonctionnalités pour seulement 9,99 € par mois.";
+  }
+  text.textContent = msg;
+  banner.hidden = !msg || trialBannerDismissed;
+  // Rappel (une fois par jour) quand il reste 5 jours ou moins
+  if (d.reminder && d.reminder_popup && !reminderShownThisSession) {
+    const w = document.getElementById("welcomeScreen");
+    if (w && w.hidden) {
+      reminderShownThisSession = true;
+      document.getElementById("reminderText").textContent = msg + " (Il reste " + d.days_left + " jour" + (d.days_left > 1 ? "s" : "") + " d'essai.)";
+      try { document.getElementById("reminderDialog").showModal(); } catch (e) {}
+      try { api().ack_reminder(); } catch (e) {}
+    }
+  }
+}
+let reminderShownThisSession = false;
+
+// -------------------- Accueil : se connecter / invité --------------------
+function showWelcome(step) {
+  document.getElementById("welcomeScreen").hidden = false;
+  setWelcomeStep(step || "choice");
+}
+function hideWelcome() {
+  document.getElementById("welcomeScreen").hidden = true;
+  refreshTrialBanner();
+}
+function setWelcomeStep(step) {
+  ["choice", "email", "code"].forEach((s) => {
+    document.getElementById("welcome-" + s).hidden = (s !== step);
+  });
+  const first = step === "email" ? "welcomeEmail" : step === "code" ? "welcomeCode" : null;
+  if (first) setTimeout(() => { const el = document.getElementById(first); if (el) el.focus(); }, 50);
+}
+function welcomeStatus(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg || "";
+  el.classList.toggle("error", !!isError);
+}
+function showNotice(title, text) {
+  document.getElementById("noticeTitle").textContent = title;
+  document.getElementById("noticeText").textContent = text;
+  document.getElementById("noticeDialog").showModal();
+}
+
+function bindWelcome() {
+  const $ = (id) => document.getElementById(id);
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-open]");
+    if (!a) return;
+    e.preventDefault();
+    try { api().open_url(a.dataset.open); } catch (err) {}
+  });
+  $("welcomeLoginBtn").onclick = () => setWelcomeStep("email");
+  $("welcomeGuestBtn").onclick = async () => {
+    try { applyLicenseState(JSON.parse(await api().welcome_continue_as_guest())); } catch (e) {}
+    hideWelcome();
+  };
+  $("welcomeBackBtn1").onclick = () => { welcomeStatus("welcomeStatus1", ""); setWelcomeStep("choice"); };
+  $("welcomeBackBtn2").onclick = () => { welcomeStatus("welcomeStatus2", ""); setWelcomeStep("email"); };
+  $("welcomeEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") $("welcomeSendBtn").click(); });
+  $("welcomeCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("welcomeVerifyBtn").click(); });
+
+  $("welcomeSendBtn").onclick = async () => {
+    const email = ($("welcomeEmail").value || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { welcomeStatus("welcomeStatus1", "Indiquez une adresse e-mail valide.", true); return; }
+    if (!$("welcomeCgu").checked) { welcomeStatus("welcomeStatus1", "Merci d'accepter les conditions d'utilisation pour continuer.", true); return; }
+    const btn = $("welcomeSendBtn");
+    btn.disabled = true;
+    welcomeStatus("welcomeStatus1", "Envoi du code… la première fois, cela peut prendre jusqu'à une minute.");
+    try {
+      const res = JSON.parse(await api().request_login_code(email, $("welcomeMkt").checked));
+      if (res.ok) {
+        $("welcomeCodeSub").textContent = "Code envoyé à " + email + ". Vérifiez aussi vos courriers indésirables.";
+        welcomeStatus("welcomeStatus1", "");
+        $("welcomeCode").value = "";
+        setWelcomeStep("code");
+      } else {
+        welcomeStatus("welcomeStatus1", res.error || "Une erreur est survenue.", true);
+      }
+    } catch (e) {
+      welcomeStatus("welcomeStatus1", "Connexion impossible pour le moment. Réessayez.", true);
+    }
+    btn.disabled = false;
+  };
+
+  $("welcomeVerifyBtn").onclick = async () => {
+    const email = ($("welcomeEmail").value || "").trim();
+    const code = ($("welcomeCode").value || "").trim();
+    if (code.length < 6) { welcomeStatus("welcomeStatus2", "Entrez le code à 6 chiffres reçu par e-mail.", true); return; }
+    const btn = $("welcomeVerifyBtn");
+    btn.disabled = true;
+    welcomeStatus("welcomeStatus2", "Vérification…");
+    try {
+      const res = JSON.parse(await api().verify_login_code(email, code));
+      if (res.ok) {
+        applyLicenseState(res.state);
+        hideWelcome();
+        welcomeStatus("welcomeStatus2", "");
+        if (res.trial_denied) {
+          showNotice("Connexion réussie", res.message || "Un essai gratuit a déjà été utilisé depuis cette connexion. Vous gardez la version gratuite.");
+        } else if (res.state && res.state.license_kind === "trial") {
+          showNotice("Bienvenue !", "Votre compte est créé : " + res.state.days_left + " jours de Retrio Pro offerts. Profitez de tout, sans limite.");
+        } else {
+          showNotice("Connexion réussie", "Vous êtes connecté.");
+        }
+      } else {
+        welcomeStatus("welcomeStatus2", res.error || "Code invalide.", true);
+      }
+    } catch (e) {
+      welcomeStatus("welcomeStatus2", "Connexion impossible pour le moment. Réessayez.", true);
+    }
+    btn.disabled = false;
+  };
+
+  $("accountBtn").onclick = async () => {
+    if (licenseState.has_account) {
+      try { applyLicenseState(JSON.parse(await api().logout_account())); } catch (e) {}
+      showWelcome("choice");
+    } else {
+      showWelcome("email");
+    }
+  };
+  $("proTrialBtn").onclick = () => { $("proDialog").close(); showWelcome("email"); };
+  $("trialBannerBtn").onclick = () => { const b = document.querySelector(".btn-pro"); if (b) b.click(); };
+  $("trialBannerClose").onclick = () => { trialBannerDismissed = true; $("trialBanner").hidden = true; };
+  $("reminderSubscribeBtn").onclick = () => { $("reminderDialog").close(); const b = document.querySelector(".btn-pro"); if (b) b.click(); };
 }
 
 function isEffectivePremium() {
@@ -338,7 +505,7 @@ function buildLockedTab(key, el) {
         <p class="locked-tab-subtitle">${escapeHtml(info.subtitle)}</p>
         <ul>${info.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
         <div class="locked-tab-actions">
-          <button class="btn btn-pro">Passer à Retrio Pro — 4,99 €/mois</button>
+          <button class="btn btn-pro">Passer à Retrio Pro — 9,99 €/mois</button>
         </div>
         <div class="locked-tab-reassurance">Sans engagement · Vos fichiers restent sur votre ordinateur</div>
       </div>

@@ -3,9 +3,9 @@
 <head><meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests; default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; media-src 'self'; connect-src 'self' https://us.i.posthog.com; frame-src https://buy.stripe.com; base-uri 'self'; form-action 'self' https://buy.stripe.com; object-src 'none'">
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Retrio Pro — Unlock every Pro feature</title>
+<title>Retrio Pro — €9.99 per month, 15 days free</title>
 <link rel="icon" type="image/png" href="../favicon.png" />
-<meta name="description" content="Retrio Pro unlocks unlimited organisation suggestions, exact duplicate detection and deep clean-up tools for €4.99/month. Cancel anytime." />
+<meta name="description" content="Retrio Pro: €9.99 per month, cancel anytime. 15 days free when you sign up with your email address. Unlimited organising, duplicate detection and clean-up." />
 <meta name="robots" content="index,follow" />
 <meta name="theme-color" content="#1B4332" />
 <link rel="canonical" href="https://retrio.eu/en/retrio-pro.html" />
@@ -28,8 +28,8 @@
   .pro-price-tag .amount{font-size:1.5rem;font-family:'Fraunces',serif}
   .pro-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:46px 0}
   .pro-feature{background:#FBF8F0;border:1px solid #DED4BC;border-radius:16px;padding:14px 14px 22px;display:flex;flex-direction:column;gap:18px}
-  .pro-illustration{aspect-ratio:4/3;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:16px}
-  .pro-feature-body{padding:0 10px}
+  .pro-illustration{aspect-ratio:16/9;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:16px}
+  .pro-feature-body{padding:0 10px;text-align:left}.pro-feature-body .lim,.pro-feature-body .ok{margin-top:8px;margin-right:6px}
   .pro-feature h3{margin:0 0 8px;font-family:'Fraunces',serif;font-size:1.05rem;color:#1B4332}
   .pro-feature p{margin:0;color:#4C5A50;font-size:.92rem;line-height:1.6}
   .pro-cta-box{background:#1B4332;color:#F5F1E6;border-radius:22px;padding:44px 32px;text-align:center;margin:50px 0}
@@ -40,6 +40,39 @@
   .pro-faq summary{cursor:pointer;font-weight:600;color:#1B4332}
   .pro-faq p{color:#4C5A50;font-size:.92rem;line-height:1.6;margin:10px 0 0}
   @media(max-width:700px){.pro-grid{grid-template-columns:1fr}header nav>a:not(.btn){display:none}}
+  .pro-eyebrow{display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#896119;margin-bottom:14px}
+  .price-hero{display:flex;flex-direction:column;align-items:center;gap:10px;margin:6px 0 8px}
+  .price-big{font-family:'Fraunces',Georgia,serif;font-weight:700;color:#1B4332;line-height:1;font-size:clamp(3.2rem,9vw,5.6rem)}
+  .price-big small{font-size:.38em;font-weight:600;color:#4C5A50;font-family:'Inter',sans-serif;margin-left:6px}
+  .price-sub{font-weight:700;color:#14251C;font-size:1.1rem}
+  .trial-pill{display:inline-block;background:#1B4332;color:#F5F1E6;border-radius:999px;padding:11px 24px;font-weight:700;font-size:1.02rem;margin-top:6px}
+  .section-title{font-size:clamp(1.6rem,3vw,2.1rem);margin:70px 0 12px}
+  .section-lead{max-width:640px;margin:0 auto 30px;color:#4C5A50;line-height:1.65}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;text-align:left;margin-top:26px}
+  .step{background:#FBF8F0;border:1px solid #DED4BC;border-radius:16px;padding:22px}
+  .step .num{width:34px;height:34px;border-radius:50%;background:#1B4332;color:#F5F1E6;display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:12px}
+  .step h3{margin:0 0 6px;font-family:'Fraunces',serif;font-size:1.08rem;color:#1B4332}
+  .step p{margin:0;color:#4C5A50;font-size:.93rem;line-height:1.6}
+  .compare{width:100%;max-width:860px;margin:10px auto 0;border-collapse:separate;border-spacing:0;background:#FBF8F0;border:1px solid #DED4BC;border-radius:18px;overflow:hidden;text-align:left}
+  .compare th,.compare td{padding:16px 20px;border-bottom:1px solid #E7DFC9;font-size:.95rem}
+  .compare tr:last-child td{border-bottom:none}
+  .compare thead th{background:#F1EBDA;font-family:'Fraunces',serif;font-size:1rem;color:#14251C}
+  .compare thead th.pro{background:#1B4332;color:#F5F1E6}
+  .compare td.pro{background:#EEF5EF;font-weight:700;color:#1B4332}
+  .compare td.free{color:#6A5A3A}
+  .lim{display:inline-block;background:#F3E3C6;color:#8A5A12;border-radius:999px;padding:3px 10px;font-size:.82rem;font-weight:700}
+  .ok{color:#1B4332;font-weight:800}
+  .fomo{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;text-align:left;margin-top:24px}
+  .fomo div{background:#FBF8F0;border:1px solid #DED4BC;border-left:4px solid #C9A24A;border-radius:14px;padding:20px}
+  .fomo strong{display:block;font-family:'Fraunces',serif;color:#1B4332;font-size:1.05rem;margin-bottom:6px}
+  .fomo p{margin:0;color:#4C5A50;font-size:.92rem;line-height:1.6}
+  .reassure{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px;text-align:left}
+  .reassure div{padding:4px 6px;color:#4C5A50;font-size:.93rem;line-height:1.6}
+  .reassure b{display:block;color:#1B4332;font-size:1rem;margin-bottom:4px}
+  .btn-ghost{background:transparent;color:#1B4332;border:1.5px solid #1B4332}
+  .btn-ghost:hover{background:#1B4332;color:#F5F1E6}
+  @media(max-width:700px){.steps,.fomo,.reassure{grid-template-columns:1fr}.compare th,.compare td{padding:12px 12px;font-size:.88rem}}
+
 </style>
 <script src="/assets/site.js" defer></script><meta name="referrer" content="strict-origin-when-cross-origin"><meta property="og:image" content="https://retrio.eu/assets/retrio-social-preview.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://retrio.eu/assets/retrio-social-preview.jpg"><link rel="alternate" hreflang="fr" href="https://retrio.eu/retrio-pro.html" />
 <link rel="alternate" hreflang="en" href="https://retrio.eu/en/retrio-pro.html" />
@@ -55,21 +88,57 @@
     </a>
     <nav style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
       <a href="./index.html#fonctionnement" style="color:#3C4A40;font-size:.92rem;font-weight:600">How it works</a>
-      <a href="./guides.html" style="color:#3C4A40;font-size:.92rem;font-weight:600">Practical guides</a>
+      <a href="./guides.html" style="color:#3C4A40;font-size:.92rem;font-weight:600">Practical tips</a>
       <a href="./download.html" class="btn" style="color:#F5F1E6;background:#1B4332;padding:10px 20px;font-size:.9rem">Download</a>
     </nav>
   </div>
 </header>
 
 <main class="wrap pro-hero">
-  <div class="pro-price-tag"><span class="amount">4,99 €</span><span>/ month, cancel anytime</span></div>
-  <h1 style="font-size:clamp(2.1rem,4.4vw,3.1rem);margin:0 0 16px">Upgrade to Retrio Pro</h1>
-  <p style="max-width:640px;margin:0 auto;color:#4C5A50;font-size:1.05rem;line-height:1.65">Unlock unlimited organisation suggestions, exact duplicate detection and deep clean-up tools. Nothing is moved or deleted without your approval. Cancel anytime through Stripe.</p>
-  <div style="margin-top:30px">
-    <a class="btn" href="https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00" target="_blank" rel="noopener" style="background:#1B4332;color:#F5F1E6;padding:17px 34px;font-size:1rem">Subscribe — €4.99/month</a>
+  <span class="pro-eyebrow">Retrio Pro</span>
+  <h1 style="font-size:clamp(1.9rem,3.8vw,2.7rem);margin:0 0 6px">All of Retrio, with no limits</h1>
+  <div class="price-hero">
+    <div class="price-big">€9.99<small>per month</small></div>
+    <div class="price-sub">No commitment. Cancel anytime.</div>
+    <div class="trial-pill">15 days free when you sign up with an email address</div>
   </div>
-  <p style="margin-top:14px;font-size:.85rem;color:#5B7364">Secure payment through Stripe. Retrio never stores your card details.</p>
+  <p style="max-width:660px;margin:18px auto 0;color:#4C5A50;font-size:1.04rem;line-height:1.65">Enter your email address in Retrio: your account is created and you get <strong>15 days of Retrio Pro for free</strong>, no credit card needed. After that, it is €9.99 per month if you want to continue. Otherwise, you keep the free version.</p>
+  <div style="margin-top:28px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+    <a class="btn" href="./download.html" style="background:#1B4332;color:#F5F1E6;padding:17px 34px;font-size:1rem">Download Retrio and start my 15 days</a>
+    <a class="btn btn-ghost" href="https://buy.stripe.com/9B614o0bp7Ki2USby9dnW01" target="_blank" rel="noopener" style="padding:15px 30px;font-size:1rem">Subscribe now — €9.99/month</a>
+  </div>
+  <p style="margin-top:14px;font-size:.85rem;color:#5B7364">Secure payment by Stripe. Retrio never stores your card details.</p>
 
+  <h2 class="section-title">How does it work?</h2>
+  <p class="section-lead">Three steps, under two minutes. No credit card for the trial.</p>
+  <div class="steps">
+    <div class="step"><div class="num">1</div><h3>You enter your email</h3><p>The first time you open Retrio, click “Log in”, enter your email address and the 6-digit code you receive. Your account is created.</p></div>
+    <div class="step"><div class="num">2</div><h3>15 days free</h3><p>Organising, duplicates and clean-up are unlocked with no limit for 15 days. We warn you 5 days before the end.</p></div>
+    <div class="step"><div class="num">3</div><h3>After that, you decide</h3><p>Carry on for €9.99 per month, with no commitment. Otherwise nothing is charged: Retrio simply goes back to the free version.</p></div>
+  </div>
+
+  <h2 class="section-title">Standard Retrio or Retrio Pro?</h2>
+  <p class="section-lead">Search stays free. Pro removes the limits where you really save time.</p>
+  <table class="compare">
+    <thead><tr><th></th><th>Standard Retrio</th><th class="pro">Retrio Pro</th></tr></thead>
+    <tbody>
+      <tr><td>Find files using your own words</td><td class="free"><span class="ok">Unlimited</span></td><td class="pro">Unlimited</td></tr>
+      <tr><td>Suggested organising and renaming</td><td class="free"><span class="lim">30 files</span></td><td class="pro">Unlimited</td></tr>
+      <tr><td>Exact duplicates</td><td class="free"><span class="lim">10 duplicates</span></td><td class="pro">Unlimited</td></tr>
+      <tr><td>Deep disk-space clean-up</td><td class="free"><span class="lim">10 items</span></td><td class="pro">Unlimited</td></tr>
+      <tr><td>Your files stay on your computer</td><td class="free"><span class="ok">Yes</span></td><td class="pro">Yes</td></tr>
+      <tr><td>Price</td><td class="free">Free</td><td class="pro">€9.99 / month, no commitment</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">Why go Pro?</h2>
+  <div class="fomo">
+    <div><strong>Stop leaving the job half done</strong><p>In the standard version, organising stops at the 30th file and duplicates at the 10th. The rest of your mess waits. With Pro, you finish the job in one go.</p></div>
+    <div><strong>Win back space for good</strong><p>Duplicates, temporary files, old downloads: Pro lets you clean everything, not just a sample, while you stay in control before every deletion.</p></div>
+    <div><strong>Less than €0.34 a day</strong><p>€9.99 per month, under 34 cents a day, to never waste time searching or sorting by hand again.</p></div>
+  </div>
+
+  <h2 class="section-title">What Pro unlocks</h2>
   <div class="pro-grid">
     <div class="pro-feature">
       <div class="pro-illustration" style="background:#E7EFE7">
@@ -82,15 +151,15 @@
           <div style="width:100%;display:flex;align-items:center;gap:8px;padding:7px 9px;background:#fff;border-radius:8px;box-shadow:0 6px 16px rgba(27,67,50,.14);outline:2px solid #1B4332">
             <span style="width:18px;height:22px;border-radius:3px;background:#1B4332;flex-shrink:0"></span>
             <span style="display:flex;flex-direction:column;min-width:0">
-              <span style="font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Electricity bill – March 2026.pdf</span>
-              <span style="font-size:9px;color:#6B726C">Bills / 2026</span>
+              <span style="font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">EDF invoice – March 2026.pdf</span>
+              <span style="font-size:9px;color:#6B726C">Invoices / 2026</span>
             </span>
           </div>
         </div>
       </div>
       <div class="pro-feature-body">
-        <h3>Smart organisation and naming suggestions</h3>
-        <p>Retrio suggests clearer names for poorly named documents and useful folders by type or date. You review every suggestion first.</p>
+        <h3>Suggested organising and renaming</h3>
+        <p>Retrio suggests a clearer name for badly named documents and sorts them by type or date, before you approve.<br><span class="lim">Free: 30 files</span> <span class="ok">Pro: unlimited</span></p>
       </div>
     </div>
 
@@ -115,8 +184,8 @@
         </div>
       </div>
       <div class="pro-feature-body">
-        <h3>Unlimited organisation</h3>
-        <p>Approve as many organisation suggestions as you need, individually or in batches.</p>
+        <h3>Unlimited sorting</h3>
+        <p>Approve as many sorting suggestions as you need, one by one or by selection: your whole Documents folder at once.</p>
       </div>
     </div>
 
@@ -124,7 +193,7 @@
       <div class="pro-illustration" style="background:#E7EFE7;gap:10px">
         <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
           <div style="width:46px;height:56px;border-radius:7px;background:#fff;outline:2px solid #1B4332;box-shadow:0 6px 16px rgba(27,67,50,.14);display:flex;align-items:center;justify-content:center;font-size:17px;color:#1B4332">▣</div>
-          <span style="font-size:9px;font-weight:600;color:#1B4332">Keep</span>
+          <span style="font-size:9px;font-weight:600;color:#1B4332">Kept</span>
         </div>
         <span style="font-size:14px;font-weight:700;color:#1B4332">=</span>
         <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
@@ -133,15 +202,15 @@
         </div>
       </div>
       <div class="pro-feature-body">
-        <h3>Unlimited exact duplicate detection</h3>
-        <p>Spot truly identical files, choose the copy you want to keep and send the others to the Recycle Bin.</p>
+        <h3>Exact duplicates, unlimited</h3>
+        <p>Spot strictly identical files, choose the copy to keep and send the others to the Recycle Bin.<br><span class="lim">Free: 10 duplicates</span> <span class="ok">Pro: unlimited</span></p>
       </div>
     </div>
 
     <div class="pro-feature">
       <div class="pro-illustration" style="background:#F3ECD6">
         <div style="width:100%;background:#fff;border-radius:10px;box-shadow:0 6px 16px rgba(80,60,20,.12);padding:12px;display:flex;flex-direction:column;gap:9px">
-          <div style="font-size:9px;font-weight:600;color:#8A9189;text-transform:uppercase;letter-spacing:.08em">Space you can reclaim</div>
+          <div style="font-size:9px;font-weight:600;color:#8A9189;text-transform:uppercase;letter-spacing:.08em">Space you can free</div>
           <div style="display:flex;height:9px;border-radius:5px;overflow:hidden;background:#EEE9DC">
             <span style="width:30%;background:#1B4332"></span>
             <span style="width:22%;background:#3AA46B"></span>
@@ -155,30 +224,49 @@
         </div>
       </div>
       <div class="pro-feature-body">
-        <h3>Unlimited deep clean-up</h3>
-        <p>Review temporary files, large old files, forgotten downloads, near-duplicate documents and burst photos.</p>
+        <h3>Deep clean-up, unlimited</h3>
+        <p>Scan temporary files, large old files, forgotten downloads, near-duplicate documents and burst photos.<br><span class="lim">Free: 10 items</span> <span class="ok">Pro: unlimited</span></p>
       </div>
     </div>
   </div>
 
+  <h2 class="section-title">Truly no commitment</h2>
+  <div class="reassure">
+    <div><b>No card for the trial</b>Your 15 free days need no payment method. No surprise charges.</div>
+    <div><b>Cancel in one click</b>If you subscribe, you can stop at any time from the management link sent by Stripe.</div>
+    <div><b>Your files don't move</b>If you stop, Retrio goes back to the free version. Your documents stay with you, untouched.</div>
+  </div>
+
   <div class="pro-cta-box">
-    <h2>Ready to save time?</h2>
-    <p>€4.99 per month. Cancel anytime.</p>
-    <a class="btn" href="https://buy.stripe.com/eVq9AUcYbfcK3YWgStdnW00" target="_blank" rel="noopener" style="background:#F5F1E6;color:#14251C;padding:16px 30px;font-size:.98rem">Subscribe now</a>
+    <h2>Start with 15 days free</h2>
+    <p>Then €9.99 per month, no commitment. Cancel anytime.</p>
+    <a class="btn" href="./download.html" style="background:#F5F1E6;color:#14251C;padding:16px 30px;font-size:.98rem">Download Retrio</a>
   </div>
 
   <div class="pro-faq">
     <details>
-      <summary>How do I activate Retrio Pro in the app?</summary>
-      <p>After subscribing, open Retrio, select “Discover” in the sidebar, then “Already subscribed”, and enter the email used for payment. Your Pro features unlock immediately.</p>
+      <summary>How do I get my 15 free days?</summary>
+      <p>Download Retrio, open it and click “Log in”. Enter your email address, accept the terms of use, then enter the 6-digit code you receive by email. Your 15 days of Retrio Pro start immediately, no credit card needed.</p>
+    </details>
+    <details>
+      <summary>What happens after the 15 days?</summary>
+      <p>Five days before the end, Retrio warns you. Without a subscription you simply go back to the free version: nothing is charged. To continue with no limits, subscribe for €9.99 per month.</p>
+    </details>
+    <details>
+      <summary>Can I take another trial with a different email address?</summary>
+      <p>No. To prevent abuse, only one free trial is granted per Internet connection and per computer. An encrypted fingerprint of your connection is kept for this purpose, never your IP address in clear.</p>
+    </details>
+    <details>
+      <summary>How do I activate Retrio Pro if I subscribe directly?</summary>
+      <p>Once subscribed, open Retrio and log in with the email address used at checkout (or click “Discover” then “Check my subscription”). Pro features unlock immediately.</p>
     </details>
     <details>
       <summary>How do I cancel my subscription?</summary>
-      <p>You can cancel anytime from the management link Stripe sends after your first payment. There is no penalty and no explanation required.</p>
+      <p>You can cancel at any time from the management link Stripe sends after your first payment, with no explanation or penalty.</p>
     </details>
     <details>
       <summary>Are my files uploaded to the Internet?</summary>
-      <p>No. Analysis and search remain entirely local. Only your subscription status is checked online using your email address.</p>
+      <p>No. Analysis and search remain 100% local. Only your email address and the status of your trial or subscription are checked online.</p>
     </details>
   </div>
 </main>

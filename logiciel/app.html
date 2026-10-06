@@ -13,7 +13,46 @@
 
 <dialog id="telemetryDialog"><h2>Statistiques techniques</h2><p>Retrio compte les ouvertures et les grandes étapes techniques avec un identifiant aléatoire recréé à chaque session. Aucun nom, chemin, contenu de fichier, recherche ou adresse email n’est transmis.</p><p class="telemetry-detail">Cette mesure minimale est active par défaut. Vous pouvez la désactiver ou la réactiver à tout moment.</p><div class="telemetry-actions"><button type="button" class="btn btn-primary" id="telemetryAcceptBtn">Activer</button><button type="button" class="btn btn-outline" id="telemetryDeclineBtn">Désactiver</button></div></dialog>
 
-<dialog id="proDialog"><div class="pro-dialog-eyebrow">Retrio Pro</div><h2>Débloquez tout le potentiel de Retrio</h2><p class="pro-dialog-sub">Fini les limites sur les fonctions déjà disponibles : rangement, doublons exacts et nettoyage approfondi.</p><ul class="pro-benefits"><li>Rangement et renommage proposés, avec validation</li><li>Classement par type ou par date, sans limite</li><li>Détection et nettoyage des doublons exacts, sans limite</li><li>Nettoyage approfondi : fichiers anciens, temporaires et oubliés</li><li>Quasi-doublons de documents et photos en rafale</li></ul><div class="pro-price-row"><div class="pro-price">4,99 € <span>/ mois</span></div><div class="pro-price-note">Résiliable à tout moment, sans engagement</div></div><button class="btn btn-primary pro-cta" id="proSubscribeBtn">S'abonner maintenant — 4,99 €/mois</button><div class="pro-divider">Déjà abonné ?</div><div class="pro-email-row"><input type="email" id="proEmailInput" placeholder="L'email utilisé lors du paiement" /><button class="btn btn-outline" id="proVerifyBtn">Vérifier mon abonnement</button></div><div class="pro-status-msg" id="proStatusMsg"></div><form method="dialog"><button class="btn btn-outline">Fermer</button></form></dialog>
+<dialog id="proDialog"><div class="pro-dialog-eyebrow">Retrio Pro</div><h2>Débloquez tout le potentiel de Retrio</h2><p class="pro-dialog-sub">Fini les limites sur les fonctions déjà disponibles : rangement, doublons exacts et nettoyage approfondi.</p><ul class="pro-benefits"><li>Rangement et renommage proposés, avec validation</li><li>Classement par type ou par date, sans limite</li><li>Détection et nettoyage des doublons exacts, sans limite</li><li>Nettoyage approfondi : fichiers anciens, temporaires et oubliés</li><li>Quasi-doublons de documents et photos en rafale</li></ul><div class="pro-price-row"><div class="pro-price">9,99 € <span>/ mois</span></div><div class="pro-price-note">Sans engagement, résiliable à tout moment</div></div><div class="pro-trial-line" id="proTrialLine">15 jours offerts si vous créez un compte avec votre adresse e-mail</div><button class="btn btn-primary pro-cta" id="proTrialBtn">Essayer 15 jours gratuitement</button><button class="btn btn-outline pro-cta" id="proSubscribeBtn">S'abonner maintenant — 9,99 €/mois</button><div class="pro-divider">Déjà abonné ?</div><div class="pro-email-row"><input type="email" id="proEmailInput" placeholder="L'email utilisé lors du paiement" /><button class="btn btn-outline" id="proVerifyBtn">Vérifier mon abonnement</button></div><div class="pro-status-msg" id="proStatusMsg"></div><form method="dialog"><button class="btn btn-outline">Fermer</button></form></dialog>
+<dialog id="noticeDialog"><h2 id="noticeTitle"></h2><p id="noticeText" class="pro-dialog-sub"></p><form method="dialog"><button class="btn btn-primary">OK</button></form></dialog>
+<dialog id="reminderDialog"><div class="pro-dialog-eyebrow">Retrio Pro</div><h2>Votre essai se termine bientôt</h2><p id="reminderText" class="pro-dialog-sub"></p><button class="btn btn-primary pro-cta" id="reminderSubscribeBtn">S'abonner pour 9,99 € par mois</button><form method="dialog"><button class="btn btn-outline">Plus tard</button></form></dialog>
+<div class="welcome" id="welcomeScreen" hidden>
+  <div class="welcome-card">
+    <div class="welcome-mark">R</div>
+    <div id="welcome-choice">
+      <h1>Bienvenue sur Retrio</h1>
+      <p class="welcome-sub">Créez votre compte avec votre adresse e-mail et profitez de <strong>15 jours de Retrio Pro offerts</strong>. Sans carte bancaire.</p>
+      <div class="welcome-actions">
+        <button class="btn btn-primary btn-xl" id="welcomeLoginBtn">Se connecter</button>
+        <button class="btn btn-outline btn-xl" id="welcomeGuestBtn">Continuer en tant qu'invité</button>
+      </div>
+      <p class="welcome-note">En mode invité, vous gardez la version gratuite de Retrio. Vous pourrez vous connecter à tout moment.</p>
+    </div>
+    <div id="welcome-email" hidden>
+      <h1>Votre adresse e-mail</h1>
+      <p class="welcome-sub">Nous vous envoyons un code à 6 chiffres pour créer votre compte ou vous reconnecter. 15 jours de Retrio Pro offerts pour un nouveau compte.</p>
+      <input type="email" id="welcomeEmail" class="welcome-input" placeholder="vous@exemple.fr" autocomplete="email" />
+      <label class="welcome-check"><input type="checkbox" id="welcomeCgu" /> <span>J'accepte les <a href="#" data-open="https://retrio.eu/cgu.html">conditions d'utilisation</a> et la <a href="#" data-open="https://retrio.eu/politique-confidentialite.html">politique de confidentialité</a>. (obligatoire)</span></label>
+      <label class="welcome-check"><input type="checkbox" id="welcomeMkt" /> <span>Je souhaite recevoir des nouvelles de Retrio par e-mail. (facultatif)</span></label>
+      <div class="welcome-actions">
+        <button class="btn btn-primary btn-xl" id="welcomeSendBtn">Recevoir mon code</button>
+        <button class="btn btn-outline" id="welcomeBackBtn1">Retour</button>
+      </div>
+      <p class="welcome-status" id="welcomeStatus1"></p>
+    </div>
+    <div id="welcome-code" hidden>
+      <h1>Entrez votre code</h1>
+      <p class="welcome-sub" id="welcomeCodeSub">Code envoyé. Vérifiez vos e-mails (et vos courriers indésirables).</p>
+      <input type="text" id="welcomeCode" class="welcome-input welcome-code-input" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+      <div class="welcome-actions">
+        <button class="btn btn-primary btn-xl" id="welcomeVerifyBtn">Valider</button>
+        <button class="btn btn-outline" id="welcomeBackBtn2">Retour</button>
+      </div>
+      <p class="welcome-status" id="welcomeStatus2"></p>
+    </div>
+  </div>
+</div>
+<div class="trial-banner" id="trialBanner" hidden><span id="trialBannerText"></span><button type="button" id="trialBannerBtn">S'abonner</button><button type="button" id="trialBannerClose" aria-label="Fermer">×</button></div>
 <div class="preview-banner" id="previewBanner" hidden>Aperçu mode visiteur — vous êtes en réalité Pro. <button type="button" id="exitPreviewBtn">Revenir en Pro</button></div><div class="app">
 
   <!-- ============ SIDEBAR ============ -->
@@ -72,9 +111,10 @@
 
       <div class="pro-card" id="proCard">
         <div class="pro-title" id="proCardTitle">Passer à Retrio Pro</div>
-        <div class="pro-sub" id="proCardSub">Doublons, rangement automatique et plus encore.</div>
+        <div class="pro-sub" id="proCardSub">9,99 € par mois sans engagement. 15 jours offerts avec un compte.</div>
         <button class="btn btn-pro" id="proDiscoverBtn">Découvrir</button>
         <div class="pro-active" id="proActiveMsg" hidden>Retrio Pro actif — merci !</div><button type="button" class="pro-preview-toggle" id="proPreviewToggle" hidden>Aperçu mode visiteur</button>
+        <div class="account-row" id="accountRow"><span class="account-email" id="accountEmail"></span><button type="button" class="account-link" id="accountBtn">Se connecter</button></div>
       </div>
     </div>
   </aside>
