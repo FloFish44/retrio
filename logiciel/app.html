@@ -5,7 +5,7 @@
 <title>Retrio</title>
 <link rel="stylesheet" href="app.css" />
 </head>
-<body>
+<body><div id="bootSplash" style="position:fixed;left:0;right:0;bottom:0;top:44px;z-index:99999;background:#F5F1E6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#1B4332;text-align:center"><style>@keyframes retrioSpin{to{transform:rotate(360deg)}}</style><div style="width:56px;height:56px;border-radius:14px;background:#1B4332;color:#fff;display:flex;align-items:center;justify-content:center;font:700 30px Georgia,serif">R</div><div style="font-size:20px;font-weight:700">Retrio démarre…</div><div style="width:30px;height:30px;border:3px solid #DED4BC;border-top-color:#1B4332;border-radius:50%;animation:retrioSpin .9s linear infinite"></div><div style="font-size:13px;color:#5B7364;max-width:340px">Le premier lancement peut prendre quelques secondes. Merci de patienter.</div></div>
 <div class="resize-handle rh-n" data-edge="n"></div><div class="resize-handle rh-s" data-edge="s"></div><div class="resize-handle rh-w" data-edge="w"></div><div class="resize-handle rh-e" data-edge="e"></div><div class="resize-handle rh-nw" data-edge="nw"></div><div class="resize-handle rh-ne" data-edge="ne"></div><div class="resize-handle rh-sw" data-edge="sw"></div><div class="resize-handle rh-se" data-edge="se"></div>
 <header class="titlebar"><div class="pywebview-drag-region">R &nbsp; Retrio · Vos fichiers, en un instant</div><button id="demoBtn">Besoin d’aide ? Voir la démo</button><div class="language-switch" id="languageSwitch" aria-label="Choisir la langue"><button type="button" data-lang="fr" aria-label="Français">FR</button><button type="button" data-lang="en" aria-label="English">EN</button></div><button id="minBtn" aria-label="Réduire">—</button><button id="maxBtn" aria-label="Agrandir">□</button><button id="closeBtn" aria-label="Fermer">×</button></header>
 <dialog id="demoDialog"><h2>Retrouvez vos fichiers en 4 étapes</h2><p>1. Choisissez vos dossiers.<br>2. Lancez l’analyse locale.<br>3. Consultez le bilan.<br>4. Décrivez ce que vous cherchez.</p><video id="demoVideo" class="demo-video" controls preload="metadata" playsinline><source src="demo-retrio.mp4" type="video/mp4">Votre ordinateur ne peut pas lire cette vidéo.</video><form method="dialog"><button class="btn btn-primary">J’ai compris</button></form></dialog>
@@ -43,7 +43,7 @@
     <div id="welcome-code" hidden>
       <h1>Entrez votre code</h1>
       <p class="welcome-sub" id="welcomeCodeSub">Code envoyé. Vérifiez vos e-mails (et vos courriers indésirables).</p>
-      <input type="text" id="welcomeCode" class="welcome-input welcome-code-input" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+      <input type="text" id="welcomeCode" class="welcome-input welcome-code-input" inputmode="numeric" placeholder="000000" autocomplete="one-time-code" />
       <div class="welcome-actions">
         <button class="btn btn-primary btn-xl" id="welcomeVerifyBtn">Valider mon code</button>
         <button class="btn btn-outline" id="welcomeBackBtn2">Retour</button>

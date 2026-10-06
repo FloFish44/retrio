@@ -43,13 +43,13 @@ Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\flore\appdata\loca
 
 [notice] A new release of pip is available: 25.2 -> 26.2.1
 [notice] To update, run: python.exe -m pip install --upgrade pip
-361 INFO: PyInstaller: 6.22.2, contrib hooks: 2026.7
-362 INFO: Python: 3.13.6
-403 INFO: Platform: Windows-10-10.0.19045-SP0
-403 INFO: Python environment: C:\Users\flore\AppData\Local\Programs\Python\Python313
-404 INFO: wrote C:\Users\flore\retrio-publish\logiciel\RetrioWeb.spec
-407 INFO: Removing temporary files and cleaning cache in C:\Users\flore\AppData\Local\pyinstaller
-8578 INFO: Module search paths (PYTHONPATH):
+260 INFO: PyInstaller: 6.22.2, contrib hooks: 2026.7
+260 INFO: Python: 3.13.6
+301 INFO: Platform: Windows-10-10.0.19045-SP0
+301 INFO: Python environment: C:\Users\flore\AppData\Local\Programs\Python\Python313
+302 INFO: wrote C:\Users\flore\retrio-publish\logiciel\RetrioWeb.spec
+306 INFO: Removing temporary files and cleaning cache in C:\Users\flore\AppData\Local\pyinstaller
+5497 INFO: Module search paths (PYTHONPATH):
 ['C:\\Users\\flore\\retrio-publish\\logiciel',
  'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\python313.zip',
  'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\DLLs',
@@ -57,113 +57,114 @@ Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\flore\appdata\loca
  'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313',
  'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages',
  'C:\\Users\\flore\\retrio-publish\\logiciel']
-9382 INFO: Appending 'binaries' from .spec
-9382 INFO: Appending 'datas' from .spec
-9415 INFO: checking Analysis
-9415 INFO: Building Analysis because Analysis-00.toc is non existent
-9415 INFO: Looking for Python shared library...
-9415 INFO: Using Python shared library: C:\Users\flore\AppData\Local\Programs\Python\Python313\python313.dll
-9415 INFO: Running Analysis Analysis-00.toc
-9415 INFO: Target bytecode optimization level: 0
-9415 INFO: Initializing module dependency graph...
-9418 INFO: Initializing module graph hook caches...
-9612 INFO: Analyzing modules for base_library.zip ...
-11047 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-12721 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-12793 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-16215 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-19156 INFO: Caching module dependency graph...
-19238 INFO: Analyzing C:\Users\flore\retrio-publish\logiciel\retrio_web.py
-19490 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-19844 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-20348 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-20454 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-20507 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-20977 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-21018 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-21168 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-22013 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-23006 INFO: Processing standard module hook 'hook-sqlite3.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-23446 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-23448 INFO: SetuptoolsInfo: initializing cached setuptools info...
-29871 INFO: Processing standard module hook 'hook-pypdfium2.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-29984 INFO: Processing standard module hook 'hook-pypdfium2_raw.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-30331 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-30529 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-31044 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-33007 INFO: Processing standard module hook 'hook-clr.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pythonnet\\_pyinstaller'
-33154 INFO: Processing standard module hook 'hook-clr_loader.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-33421 INFO: Processing standard module hook 'hook-pycparser.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-33725 INFO: Processing standard module hook 'hook-setuptools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-33760 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-33909 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-33910 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
-33926 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-34310 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35038 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-35041 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35054 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35055 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
-35425 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35426 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
-35474 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-35477 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35477 INFO: Setuptools: 'zipp' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.zipp'!
-35986 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-35988 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
-36988 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-36989 INFO: Setuptools: 'wheel' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.wheel'!
-41699 INFO: Processing standard module hook 'hook-charset_normalizer.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-43149 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-43861 INFO: Processing standard module hook 'hook-onnxruntime.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-44410 INFO: Processing standard module hook 'hook-urllib3.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-45909 INFO: Processing standard module hook 'hook-certifi.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-46653 INFO: Processing standard module hook 'hook-webview.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\webview\\__pyinstaller'
-47298 INFO: Processing standard module hook 'hook-jinja2.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
-49117 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
-49726 INFO: Analyzing hidden import 'pypdfium2.__main__'
-49746 INFO: Analyzing hidden import 'winrt.runtime.interop'
-49756 INFO: Analyzing hidden import 'winrt.system.hresult'
-49769 INFO: Processing module hooks (post-graph stage)...
-49771 WARNING: Hidden import "pycparser.lextab" not found!
-49771 WARNING: Hidden import "pycparser.yacctab" not found!
-50366 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
-50538 INFO: Performing binary vs. data reclassification (293 entries)
-51614 INFO: Looking for ctypes DLLs
-51838 INFO: Analyzing run-time hooks ...
-51843 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
-51857 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
-51887 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
-51902 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
-51940 INFO: Creating base_library.zip...
-51971 INFO: Looking for dynamic libraries
-56304 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy.libs']
-56304 INFO: Extra DLL search directories (PATH): []
-57730 INFO: Warnings written to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\warn-RetrioWeb.txt
-57859 INFO: Graph cross-reference written to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\xref-RetrioWeb.html
-58039 INFO: checking PYZ
-58040 INFO: Building PYZ because PYZ-00.toc is non existent
-58040 INFO: Building PYZ (ZlibArchive) C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\PYZ-00.pyz
-59109 INFO: Building PYZ (ZlibArchive) C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\PYZ-00.pyz completed successfully.
-59147 INFO: checking PKG
-59147 INFO: Building PKG because PKG-00.toc is non existent
-59147 INFO: Building PKG (CArchive) RetrioWeb.pkg
-59237 INFO: Building PKG (CArchive) RetrioWeb.pkg completed successfully.
-59239 INFO: Bootloader C:\Users\flore\AppData\Local\Programs\Python\Python313\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
-59239 INFO: checking EXE
-59239 INFO: Building EXE because EXE-00.toc is non existent
-59239 INFO: Building EXE from EXE-00.toc
-59239 INFO: Copying bootloader EXE to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\RetrioWeb.exe
-59538 INFO: Copying icon to EXE
-59579 INFO: Copying 0 resources to EXE
-59579 INFO: Embedding manifest in EXE
-59623 INFO: Appending PKG archive to EXE
-59904 INFO: Fixing EXE headers
-60319 INFO: Building EXE from EXE-00.toc completed successfully.
-60325 INFO: checking COLLECT
-60325 INFO: Building COLLECT because COLLECT-00.toc is non existent
-60326 INFO: Building COLLECT COLLECT-00.toc
-61547 INFO: Building COLLECT COLLECT-00.toc completed successfully.
-61562 INFO: Build complete! The results are available in: C:\Users\flore\retrio-publish\logiciel\dist
+6980 INFO: Appending 'binaries' from .spec
+6981 INFO: Appending 'datas' from .spec
+7002 INFO: checking Analysis
+7002 INFO: Building Analysis because Analysis-00.toc is non existent
+7002 INFO: Looking for Python shared library...
+7002 INFO: Using Python shared library: C:\Users\flore\AppData\Local\Programs\Python\Python313\python313.dll
+7002 INFO: Running Analysis Analysis-00.toc
+7002 INFO: Target bytecode optimization level: 0
+7002 INFO: Initializing module dependency graph...
+7004 INFO: Initializing module graph hook caches...
+7082 INFO: Analyzing modules for base_library.zip ...
+9483 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+10206 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+12755 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+14802 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+17052 INFO: Caching module dependency graph...
+17131 INFO: Analyzing C:\Users\flore\retrio-publish\logiciel\retrio_web.py
+17384 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+17864 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+18536 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+18709 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+18788 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+19331 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+19424 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+19642 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+20704 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+22160 INFO: Processing standard module hook 'hook-sqlite3.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+22702 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+22705 INFO: SetuptoolsInfo: initializing cached setuptools info...
+29255 INFO: Processing standard module hook 'hook-pypdfium2.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+29295 INFO: Processing standard module hook 'hook-pypdfium2_raw.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+29973 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+30311 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+31023 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+33991 INFO: Processing standard module hook 'hook-clr.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pythonnet\\_pyinstaller'
+34117 INFO: Processing standard module hook 'hook-clr_loader.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+34418 INFO: Processing standard module hook 'hook-pycparser.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+34928 INFO: Processing standard module hook 'hook-setuptools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+35002 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+35111 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+35112 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
+35147 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+35738 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+36375 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+36377 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+36401 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+36402 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+36822 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+36823 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
+36877 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+36879 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+36880 INFO: Setuptools: 'zipp' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.zipp'!
+37686 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+37687 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+39093 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+39094 INFO: Setuptools: 'wheel' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.wheel'!
+44515 INFO: Processing standard module hook 'hook-charset_normalizer.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+46018 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+46899 INFO: Processing standard module hook 'hook-onnxruntime.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+47526 INFO: Processing standard module hook 'hook-urllib3.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+48919 INFO: Processing standard module hook 'hook-certifi.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+50007 INFO: Processing standard module hook 'hook-webview.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\webview\\__pyinstaller'
+50528 INFO: Processing standard module hook 'hook-jinja2.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+52120 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+52877 INFO: Analyzing hidden import 'pypdfium2.__main__'
+52934 INFO: Analyzing hidden import 'winrt.runtime.interop'
+52942 INFO: Analyzing hidden import 'winrt.system.hresult'
+52946 INFO: Processing module hooks (post-graph stage)...
+52948 WARNING: Hidden import "pycparser.lextab" not found!
+52948 WARNING: Hidden import "pycparser.yacctab" not found!
+53865 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+54173 INFO: Performing binary vs. data reclassification (293 entries)
+55722 INFO: Looking for ctypes DLLs
+55942 INFO: Analyzing run-time hooks ...
+55948 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+55953 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+55956 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+55972 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+56005 INFO: Creating base_library.zip...
+56035 INFO: Looking for dynamic libraries
+60228 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\flore\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy.libs']
+60228 INFO: Extra DLL search directories (PATH): []
+61776 INFO: Warnings written to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\warn-RetrioWeb.txt
+61902 INFO: Graph cross-reference written to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\xref-RetrioWeb.html
+62018 INFO: checking PYZ
+62018 INFO: Building PYZ because PYZ-00.toc is non existent
+62018 INFO: Building PYZ (ZlibArchive) C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\PYZ-00.pyz
+63077 INFO: Building PYZ (ZlibArchive) C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\PYZ-00.pyz completed successfully.
+63115 INFO: checking PKG
+63115 INFO: Building PKG because PKG-00.toc is non existent
+63115 INFO: Building PKG (CArchive) RetrioWeb.pkg
+63198 INFO: Building PKG (CArchive) RetrioWeb.pkg completed successfully.
+63200 INFO: Bootloader C:\Users\flore\AppData\Local\Programs\Python\Python313\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+63200 INFO: checking EXE
+63201 INFO: Building EXE because EXE-00.toc is non existent
+63201 INFO: Building EXE from EXE-00.toc
+63201 INFO: Copying bootloader EXE to C:\Users\flore\retrio-publish\logiciel\build\RetrioWeb\RetrioWeb.exe
+63293 INFO: Copying icon to EXE
+63335 INFO: Copying 0 resources to EXE
+63335 INFO: Embedding manifest in EXE
+63377 INFO: Appending PKG archive to EXE
+63588 INFO: Fixing EXE headers
+63994 INFO: Building EXE from EXE-00.toc completed successfully.
+64000 INFO: checking COLLECT
+64001 INFO: Building COLLECT because COLLECT-00.toc is non existent
+64001 INFO: Removing dir C:\Users\flore\retrio-publish\logiciel\dist\RetrioWeb
+64113 INFO: Building COLLECT COLLECT-00.toc
+65277 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+65290 INFO: Build complete! The results are available in: C:\Users\flore\retrio-publish\logiciel\dist
 Retrio 0.5.0 disponible dans dist\RetrioWeb\RetrioWeb.exe
 Appuyez sur une touche pour continuer... 
