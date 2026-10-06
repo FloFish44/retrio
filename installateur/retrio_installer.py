@@ -13,7 +13,7 @@ import traceback
 APP_NAME = "Retrio"
 EXE_NAME = "RetrioWeb.exe"
 DOWNLOAD_URL = "https://github.com/FloFish44/retrio/releases/download/v0.5.2-beta/RetrioWeb.zip"
-DOWNLOAD_SHA256 = "2673760F89F1187E282E48CDD6E778DE0FA207C27BE3EC4F03606C8B51FF04EF"
+DOWNLOAD_SHA256 = "0684B790ECE8A1E7C1BB8692FA8E8A55931DE2A784E26EED2F327F993D5AD85C"
 INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Programs" / "Retrio"
 
 
@@ -189,9 +189,24 @@ def main():
     api = Api()
     api.window = webview.create_window("Installation de Retrio", url=str(resource_path("installer.html")),
                                        js_api=api, frameless=True, easy_drag=False,
-                                       width=620, height=680, min_size=(580, 640), resizable=True,
+                                       width=520, height=530, resizable=False,
                                        background_color="#FBF8F0")
-    webview.start(icon=str(resource_path("retrio_icon.ico")))
+
+    def round_corners():
+        # Coins arrondis sur Windows 11 (sans effet sur Windows 10).
+        try:
+            import ctypes, time
+            for _ in range(40):
+                hwnd = ctypes.windll.user32.FindWindowW(None, "Installation de Retrio")
+                if hwnd:
+                    value = ctypes.c_int(2)
+                    ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(value), 4)
+                    break
+                time.sleep(0.1)
+        except Exception:
+            pass
+
+    webview.start(round_corners, icon=str(resource_path("retrio_icon.ico")))
 
 
 if __name__ == "__main__":
