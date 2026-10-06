@@ -656,6 +656,7 @@ RANGER_FREE_LIMIT = 30
 DOUBLONS_FREE_LIMIT = 10
 NETTOYAGE_FREE_LIMIT = 10
 PREMIUM_UNLIMITED = 10**9
+FREE_SEARCH_LIMIT = 10  # recherches (requetes differentes) gratuites en version classique
 
 # -- licence Retrio Pro (Stripe + service de licence Cloudflare) ------------
 LICENSE_API_BASE = "https://retrio-license.retrio-pro.workers.dev"
@@ -949,6 +950,7 @@ class Api:
             "reminder": reminder,
             "reminder_popup": bool(reminder and c.get("last_reminder_day") != today),
             "trial_days": TRIAL_DAYS,
+            "searches_left": (None if self._is_premium() else max(0, FREE_SEARCH_LIMIT - int(c.get("searches_used", 0) or 0))),
         }
         return json.dumps(state)
 
@@ -1171,6 +1173,23 @@ class Api:
             self._premium_dialog_open = False
         return True
 
+    def _search_quota(self, query):
+        """Quota de recherches de la version gratuite : (autorise, utilisees).
+        Relancer la meme requete (changement de filtre ou de dossier) ne compte pas."""
+        if self._is_premium():
+            return True, None
+        norm = " ".join(str(query or "").lower().split())
+        used = int(self._license_cache.get("searches_used", 0) or 0)
+        if norm and norm == self._license_cache.get("last_search_query", ""):
+            return True, used
+        if used >= FREE_SEARCH_LIMIT:
+            return False, used
+        used += 1
+        self._license_cache["searches_used"] = used
+        self._license_cache["last_search_query"] = norm
+        self._save_license_cache()
+        return True, used
+
     def search(self, query, type_filter, folder=""):
         import time as _time
         started_at = _time.perf_counter()
@@ -1182,6 +1201,15 @@ class Api:
         query = query or ""
         if self.type_filter == 'image':
             query = re.sub(r'\b(photos?|images?)\b', '', query, flags=re.I).strip()
+        searches_left = None
+        if query.strip():
+            allowed, used = self._search_quota(query)
+            if not allowed:
+                self._telemetry.capture("search_limit_reached", {})
+                return json.dumps({"matches": [], "count_label": "", "limit_reached": True,
+                                   "free_limit": FREE_SEARCH_LIMIT, "searches_left": 0})
+            if used is not None:
+                searches_left = max(0, FREE_SEARCH_LIMIT - used)
         if query.strip():
             if self.search_index is not None:
                 all_matches = search_entries(self.search_index, query, limit=None)
@@ -1225,7 +1253,8 @@ class Api:
             "results_count": len(all_matches),
             "duration_ms": round((_time.perf_counter() - started_at) * 1000),
         })
-        return json.dumps({"matches": match_dicts, "count_label": count_label})
+        return json.dumps({"matches": match_dicts, "count_label": count_label,
+                           "searches_left": searches_left, "free_limit": FREE_SEARCH_LIMIT})
 
     # -- actions sur un fichier ------------------------------------------------
     def _known_file(self, path, *, require_exists=True):

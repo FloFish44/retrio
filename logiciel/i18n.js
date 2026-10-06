@@ -264,7 +264,24 @@
     "Vous êtes connecté.": "You are logged in.",
     "Code invalide.": "Invalid code.",
     "Bienvenue !": "Welcome!",
-    "Un essai gratuit a déjà été utilisé depuis cette connexion. Vous gardez la version gratuite.": "A free trial has already been used from this connection. You keep the free version."
+    "Un essai gratuit a déjà été utilisé depuis cette connexion. Vous gardez la version gratuite.": "A free trial has already been used from this connection. You keep the free version.",
+    "S'abonner maintenant — 9,99 €/mois": "Subscribe now — €9.99/month",
+    "S'abonner maintenant — 9,99 €/mois": "Subscribe now — €9.99/month",
+    "Passer à Retrio Pro — 9,99 €/mois": "Upgrade to Retrio Pro — €9.99/month",
+    "Passer à Retrio Pro — 9,99 €/mois": "Upgrade to Retrio Pro — €9.99/month",
+    "9,99 € par mois sans engagement. 15 jours offerts avec un compte.": "€9.99 per month, no commitment. 15 days free with an account.",
+    "9,99 € par mois sans engagement. 15 jours offerts avec un compte.": "€9.99 per month, no commitment. 15 days free with an account.",
+    "S'abonner pour 9,99 € par mois": "Subscribe for €9.99 per month",
+    "S'abonner pour 9,99 € par mois": "Subscribe for €9.99 per month",
+    "Attention, votre accès va expirer. N'hésitez pas à vous abonner pour seulement 9,99 € par mois.": "Careful, your access is about to expire. Subscribe for just €9.99 per month.",
+    "Attention, votre accès va expirer. N'hésitez pas à vous abonner pour seulement 9,99 € par mois.": "Careful, your access is about to expire. Subscribe for just €9.99 per month.",
+    "Gardez toutes les fonctionnalités pour 9,99 € par mois, sans engagement.": "Keep every feature for €9.99 per month, no commitment.",
+    "Gardez toutes les fonctionnalités pour 9,99 € par mois, sans engagement.": "Keep every feature for €9.99 per month, no commitment.",
+    "Votre essai gratuit est terminé. Retrouvez toutes les fonctionnalités pour seulement 9,99 € par mois.": "Your free trial has ended. Get every feature back for just €9.99 per month.",
+    "Votre essai gratuit est terminé. Retrouvez toutes les fonctionnalités pour seulement 9,99 € par mois.": "Your free trial has ended. Get every feature back for just €9.99 per month.",
+    "Vous avez utilisé vos 10 recherches gratuites. Passez à Retrio Pro pour continuer à rechercher sans limite.": "You have used your 10 free searches. Upgrade to Retrio Pro to keep searching without limits.",
+    "Recherches illimitées (10 en version gratuite)": "Unlimited searches (10 on the free version)",
+    "Valider mon code": "Confirm my code"
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];
@@ -321,7 +338,12 @@
       [/^Déplacement impossible : (.+)$/, "Unable to move file: $1"]
     ];
     for (const [pattern, replacement] of rules) if (pattern.test(value)) return value.replace(pattern, replacement);
-    return TEXT[value] || value;
+    if (TEXT[value]) return TEXT[value];
+    if (!translateVariable.norm) {
+      translateVariable.norm = {};
+      for (const k of Object.keys(TEXT)) translateVariable.norm[k.replace(/\s+/g, " ").trim()] = TEXT[k];
+    }
+    return translateVariable.norm[value.replace(/\s+/g, " ").trim()] || value;
   }
 
   function translated(value) {
@@ -409,20 +431,6 @@
     get language() { return language; },
     get locale() { return language === "en" ? "en-GB" : "fr-FR"; },
     t: (value) => translated(String(value)),
-    setLanguage: applyLanguage,
-    "S'abonner maintenant — 9,99 €/mois": "Subscribe now — €9.99/month",
-    "S'abonner maintenant — 9,99 €/mois": "Subscribe now — €9.99/month",
-    "Passer à Retrio Pro — 9,99 €/mois": "Upgrade to Retrio Pro — €9.99/month",
-    "Passer à Retrio Pro — 9,99 €/mois": "Upgrade to Retrio Pro — €9.99/month",
-    "9,99 € par mois sans engagement. 15 jours offerts avec un compte.": "€9.99 per month, no commitment. 15 days free with an account.",
-    "9,99 € par mois sans engagement. 15 jours offerts avec un compte.": "€9.99 per month, no commitment. 15 days free with an account.",
-    "S'abonner pour 9,99 € par mois": "Subscribe for €9.99 per month",
-    "S'abonner pour 9,99 € par mois": "Subscribe for €9.99 per month",
-    "Attention, votre accès va expirer. N'hésitez pas à vous abonner pour seulement 9,99 € par mois.": "Careful, your access is about to expire. Subscribe for just €9.99 per month.",
-    "Attention, votre accès va expirer. N'hésitez pas à vous abonner pour seulement 9,99 € par mois.": "Careful, your access is about to expire. Subscribe for just €9.99 per month.",
-    "Gardez toutes les fonctionnalités pour 9,99 € par mois, sans engagement.": "Keep every feature for €9.99 per month, no commitment.",
-    "Gardez toutes les fonctionnalités pour 9,99 € par mois, sans engagement.": "Keep every feature for €9.99 per month, no commitment.",
-    "Votre essai gratuit est terminé. Retrouvez toutes les fonctionnalités pour seulement 9,99 € par mois.": "Your free trial has ended. Get every feature back for just €9.99 per month.",
-    "Votre essai gratuit est terminé. Retrouvez toutes les fonctionnalités pour seulement 9,99 € par mois.": "Your free trial has ended. Get every feature back for just €9.99 per month."
+    setLanguage: applyLanguage
   };
 })();

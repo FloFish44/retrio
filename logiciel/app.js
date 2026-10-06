@@ -116,6 +116,18 @@ async function bindTelemetryConsent() {
 let licenseState = { email: "", premium: false, status: "none", welcome_done: true, has_account: false, license_kind: "none", days_left: 0 };
 let previewAsFree = false;
 
+function openProDialogForLimit() {
+  const dialog = document.getElementById("proDialog");
+  if (!dialog || dialog.open) return;
+  const msg = document.getElementById("proLimitMsg");
+  if (msg) msg.hidden = false;
+  const emailInput = document.getElementById("proEmailInput");
+  if (emailInput && licenseState.email) emailInput.value = licenseState.email;
+  dialog.addEventListener("close", () => { if (msg) msg.hidden = true; }, { once: true });
+  dialog.showModal();
+  try { api().track_premium_page_viewed("recherche"); } catch (err) {}
+}
+
 function bindPremium() {
   const dialog = document.getElementById("proDialog");
   dialog.addEventListener("close", () => {
@@ -297,7 +309,7 @@ function bindWelcome() {
     try {
       const res = JSON.parse(await api().request_login_code(email, $("welcomeMkt").checked));
       if (res.ok) {
-        $("welcomeCodeSub").textContent = "Code envoyé à " + email + ". Vérifiez aussi vos courriers indésirables.";
+        $("welcomeCodeSub").textContent = (window.retrioI18n && window.retrioI18n.language === "en") ? ("Code sent to " + email + ". Also check your spam folder.") : ("Code envoyé à " + email + ". Vérifiez aussi vos courriers indésirables.");
         welcomeStatus("welcomeStatus1", "");
         $("welcomeCode").value = "";
         setWelcomeStep("code");
@@ -1172,8 +1184,19 @@ async function runSearch(query) {
   const requestId = state.requestId = (state.requestId || 0) + 1;
   const resultJson = await api().search(query || "", state.typeFilter, document.getElementById("folderScope").value);
   if (requestId !== state.requestId) return;
-  const { matches, count_label } = JSON.parse(resultJson);
-  document.getElementById("resultsCount").textContent = count_label;
+  const { matches, count_label, limit_reached, searches_left, free_limit } = JSON.parse(resultJson);
+  const en = !!(window.retrioI18n && window.retrioI18n.language === "en");
+  if (limit_reached) {
+    document.getElementById("resultsCount").textContent = en ? ("You have used your " + (free_limit || 10) + " free searches.") : ("Vous avez utilisé vos " + (free_limit || 10) + " recherches gratuites.");
+    renderResults([], "");
+    openProDialogForLimit();
+    return;
+  }
+  let label = count_label;
+  if (typeof searches_left === "number" && label) {
+    label += searches_left > 0 ? (en ? (" · " + searches_left + " free search" + (searches_left > 1 ? "es" : "") + " left") : (" · " + searches_left + " recherche" + (searches_left > 1 ? "s" : "") + " gratuite" + (searches_left > 1 ? "s" : "") + " restante" + (searches_left > 1 ? "s" : ""))) : (en ? " · last free search" : " · dernière recherche gratuite");
+  }
+  document.getElementById("resultsCount").textContent = label;
   renderResults(matches, query);
 }
 
