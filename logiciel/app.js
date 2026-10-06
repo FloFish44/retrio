@@ -31,6 +31,12 @@ function whenReady(cb) {
 
 whenReady(init);
 
+function hideBootSplash() {
+  const s = document.getElementById("bootSplash");
+  if (s) s.remove();
+}
+setTimeout(hideBootSplash, 90000);
+
 async function init() {
   bindNav();
   const demoDialog = document.getElementById('demoDialog');
@@ -79,6 +85,7 @@ async function init() {
   const folders = await api().get_known_folders();
   state.knownFolders = folders;
   renderFolderChecks();
+  hideBootSplash();
 
   try {
     applyLicenseState(JSON.parse(await api().get_license_state()));
@@ -297,6 +304,7 @@ function bindWelcome() {
   $("welcomeBackBtn1").onclick = () => { welcomeStatus("welcomeStatus1", ""); setWelcomeStep("choice"); };
   $("welcomeBackBtn2").onclick = () => { welcomeStatus("welcomeStatus2", ""); setWelcomeStep("email"); };
   $("welcomeEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") $("welcomeSendBtn").click(); });
+  $("welcomeCode").addEventListener("input", (e) => { const d = (e.target.value || "").replace(/\D/g, "").slice(0, 6); if (e.target.value !== d) e.target.value = d; });
   $("welcomeCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("welcomeVerifyBtn").click(); });
 
   $("welcomeSendBtn").onclick = async () => {
