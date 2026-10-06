@@ -79,6 +79,7 @@ async function init() {
   bindAddFolder();
   bindAnalyze();
   bindPremium();
+  bindRetrioProPanel();
   await bindTelemetryConsent();
   bindWelcome();
 
@@ -388,6 +389,7 @@ function refreshPreviewUI() {
   if (banner) banner.hidden = !previewAsFree;
   if (activeMsg) activeMsg.hidden = !licenseState.premium || previewAsFree;
   updateNavLockVisibility();
+  renderRetrioProPanel();
   const activeBtn = document.querySelector('.nav-item.active');
   const activeTab = activeBtn && activeBtn.dataset.tab;
   const toolMap = { ranger: 'tabRanger', doublons: 'tabDoublons', nettoyage: 'tabNettoyage' };
@@ -424,19 +426,138 @@ function applyTeaserValue(key, value) {
 // bloquer l'interface — chaque badge se met à jour dès que sa réponse arrive.
 function refreshTeasers() {
   if (!state.hasScanned) return;
+  rpData.loaded = { dup: false, sort: false, clean: false };
   api().find_duplicates().then((raw) => {
     const data = JSON.parse(raw);
     const total = (data.groups || []).reduce((sum, g) => sum + Math.max(0, g.files.length - 1), 0);
     applyTeaserValue("doublons", formatFr(total));
-  }).catch(() => {});
+    rpData.duplicates = total;
+    rpData.samples.duplicates = (data.groups || []).slice(0, 3).map((g) => (g.files[1] || g.files[0] || {}).name).filter(Boolean);
+  }).catch(() => {}).finally(() => { rpData.loaded.dup = true; renderRetrioProPanel(); });
   api().organize_suggestions("type").then((raw) => {
     const data = JSON.parse(raw);
     applyTeaserValue("ranger", formatFr((data.suggestions || []).length));
-  }).catch(() => {});
+    rpData.toSort = (data.suggestions || []).length;
+    rpData.samples.toSort = (data.suggestions || []).slice(0, 3).map((s) => s.name).filter(Boolean);
+  }).catch(() => {}).finally(() => { rpData.loaded.sort = true; renderRetrioProPanel(); });
   api().cleanup_suggestions().then((raw) => {
     const data = JSON.parse(raw);
     if (data.total_recoverable_human) applyTeaserValue("nettoyage", data.total_recoverable_human);
-  }).catch(() => {});
+    rpData.reclaimable = rpParseSize(data.total_recoverable_human) || (data.items || []).reduce((sum, it) => sum + (it.size || 0), 0);
+    rpData.samples.cleanup = (data.items || []).slice(0, 3).map((it) => it.name + (it.size ? " — " + rpHumanSize(it.size) : "")).filter(Boolean);
+  }).catch(() => {}).finally(() => { rpData.loaded.clean = true; renderRetrioProPanel(); });
+}
+
+
+// -------------------- Panneau « Retrio Pro » (colonne droite) --------------------
+// Affiché uniquement hors Pro, après une analyse, avec les vrais chiffres.
+const rpData = { duplicates: null, toSort: null, reclaimable: null, samples: { duplicates: [], toSort: [], cleanup: [] }, loaded: { dup: false, sort: false, clean: false } };
+let rpOpenRow = -1;
+
+function rpLang() { return window.retrioI18n && window.retrioI18n.language === "en"; }
+function rpT(fr, en) { return rpLang() ? en : fr; }
+function rpEsc(s) { return String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch])); }
+function rpParseSize(text) {
+  const m = String(text || "").replace(/ /g, " ").match(/([\d.,]+)\s*(o|Ko|Mo|Go|To|Po)/i);
+  if (!m) return 0;
+  const n = parseFloat(m[1].replace(",", "."));
+  const pow = { o: 0, ko: 1, mo: 2, go: 3, to: 4, po: 5 }[m[2].toLowerCase()] || 0;
+  return n * Math.pow(1024, pow);
+}
+function rpHumanSize(bytes) {
+  const units = ["o", "Ko", "Mo", "Go", "To"];
+  let s = bytes, i = 0;
+  while (s >= 1024 && i < units.length - 1) { s /= 1024; i++; }
+  return (i === 0 ? String(Math.round(s)) : s.toLocaleString(rpLang() ? "en-US" : "fr-FR", { maximumFractionDigits: 1 })) + " " + (rpLang() ? ["B", "KB", "MB", "GB", "TB"][i] : units[i]);
+}
+
+function rpReady() { const l = rpData.loaded; return l.dup && l.sort && l.clean; }
+
+function rpVisible() {
+  if (isEffectivePremium() || !state.hasScanned || !rpReady()) return false;
+  const any = (rpData.duplicates || 0) + (rpData.toSort || 0) + (rpData.reclaimable || 0);
+  return any > 0;
+}
+
+function renderRetrioProPanel() {
+  const host = document.getElementById("rpHost");
+  const app = document.querySelector(".app");
+  if (!host || !app) return;
+  const show = rpVisible();
+  host.hidden = !show;
+  app.classList.toggle("has-rp", show);
+  if (!show) return;
+
+  const recl = rpHumanSize(rpData.reclaimable || 0);
+  const used = rpParseSize((document.getElementById("statSize") || {}).textContent);
+  const usedTxt = used > 0 ? rpHumanSize(used) : "";
+  const nf = (n) => Number(n || 0).toLocaleString(rpLang() ? "en-US" : "fr-FR");
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  set("rpEyebrow", rpT("ANALYSE TERMINÉE · VERROUILLÉ", "ANALYSIS COMPLETE · LOCKED"));
+  const title = document.getElementById("rpTitle");
+  if (title) title.textContent = rpT("Votre PC cache " + recl + " de fichiers inutiles.", "Your PC is hiding " + recl + " of unnecessary files.");
+  set("rpSub", rpT("Retrio les a déjà repérés pendant l'analyse. Il ne vous reste qu'à les débloquer.", "Retrio already spotted them during the analysis. You only have to unlock them."));
+  set("rpGaugeLabel", rpT("Espace récupérable", "Recoverable space"));
+  set("rpGaugeValue", usedTxt ? (recl + rpT(" sur ", " of ") + usedTxt) : recl);
+  const pct = used > 0 ? Math.min(100, Math.max(2, (rpData.reclaimable / used) * 100)) : 0;
+  const fill = document.getElementById("rpBarFill");
+  if (fill) fill.style.width = pct + "%";
+
+  const lockSvg = '<svg class="rp-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const rows = [
+    [rpT("Doublons détectés", "Duplicates found"), rpT("Mêmes fichiers, copiés plusieurs fois", "Same files, copied several times"), rpData.duplicates === null ? "—" : nf(rpData.duplicates), rpData.samples.duplicates],
+    [rpT("Fichiers à ranger", "Files to organize"), rpT("Éparpillés sur votre ordinateur", "Scattered across your computer"), rpData.toSort === null ? "—" : nf(rpData.toSort), rpData.samples.toSort],
+    [rpT("Nettoyage possible", "Possible cleanup"), rpT("Fichiers lourds et inutiles", "Heavy, unneeded files"), recl, rpData.samples.cleanup],
+  ];
+  const card = document.getElementById("rpCard");
+  if (card) {
+    card.innerHTML = rows.map(([t, s, v, files], i) => (
+      '<div class="rp-row' + (i === rpOpenRow ? " open" : "") + '" data-i="' + i + '">' +
+      '<div class="rp-row-top"><div class="rp-row-txt"><div class="rp-row-t">' + rpEsc(t) + '</div><div class="rp-row-s">' + rpEsc(s) + '</div></div>' +
+      '<div class="rp-row-v">' + rpEsc(v) + '</div>' + lockSvg + '</div>' +
+      '<div class="rp-files">' + files.map((f) => '<div class="rp-file">' + rpEsc(f) + '</div>').join("") +
+      '<div class="rp-pill-wrap"><span class="rp-pill">' + rpEsc(rpT("Visible avec Pro", "Visible with Pro")) + '</span></div></div></div>'
+    )).join("");
+  }
+  const cmp = document.getElementById("rpCmp");
+  if (cmp) {
+    const feat = [
+      [rpT("Recherche par mots", "Search by words"), true],
+      [rpT("Supprimer les doublons", "Delete duplicates"), false],
+      [rpT("Rangement automatique", "Automatic organizing"), false],
+      [rpT("Nettoyage en 1 clic", "One-click cleanup"), false],
+    ];
+    cmp.innerHTML = '<span class="h">' + rpEsc(rpT("CE QUE VOUS RATEZ", "WHAT YOU MISS")) + '</span><span class="h c">' + rpEsc(rpT("GRATUIT", "FREE")) + '</span><span class="h c ok">PRO</span>' +
+      feat.map(([l, free]) => '<span class="l">' + rpEsc(l) + '</span><span class="c ' + (free ? "ok" : "no") + '">' + (free ? "✓" : "—") + '</span><span class="c ok">✓</span>').join("");
+  }
+  set("rpCtaTitle", rpT("15 jours offerts", "15 days free"));
+  set("rpCtaPrice", rpT("puis 9,99 €/mois", "then €9.99/month"));
+  set("rpBtn", rpT("Débloquer mes " + recl + " →", "Unlock my " + recl + " →"));
+  set("rpFine", rpT("Sans engagement · Annulable en 1 clic · Vos fichiers restent sur ce PC", "No commitment · Cancel in 1 click · Your files stay on this PC"));
+  rpApplyHeight();
+}
+
+function rpApplyHeight() {
+  const panel = document.getElementById("rp");
+  if (!panel) return;
+  const h = panel.clientHeight;
+  panel.querySelectorAll("[data-rp-hide-below]").forEach((el) => { el.hidden = h < Number(el.dataset.rpHideBelow); });
+}
+
+function bindRetrioProPanel() {
+  const card = document.getElementById("rpCard");
+  if (card) card.addEventListener("click", (e) => {
+    const row = e.target.closest(".rp-row"); if (!row) return;
+    const i = Number(row.dataset.i);
+    rpOpenRow = rpOpenRow === i ? -1 : i;
+    card.querySelectorAll(".rp-row").forEach((r) => r.classList.toggle("open", Number(r.dataset.i) === rpOpenRow));
+  });
+  const btn = document.getElementById("rpBtn");
+  if (btn) btn.addEventListener("click", () => { const d = document.getElementById("proDiscoverBtn"); if (d) d.click(); });
+  const panel = document.getElementById("rp");
+  if (panel && window.ResizeObserver) new ResizeObserver(rpApplyHeight).observe(panel);
+  window.addEventListener("retrio-language-changed", renderRetrioProPanel);
 }
 
 // -------------------- Navigation --------------------
