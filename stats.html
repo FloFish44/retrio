@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://retrio-backend.onrender.com; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Retrio - chiffres du jour</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#FBF8F0;color:#14251C;font:16px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+.w{max-width:880px;margin:0 auto;padding:28px 18px 60px}h1{font:600 28px Georgia,serif;margin:0 0 4px}.sub{color:#7A7161;margin:0 0 22px;font-size:14px}
+h2{font:600 13px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#4C5A50;margin:30px 0 10px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.c{background:#fff;border:1px solid #DED4BC;border-radius:14px;padding:16px}.c b{display:block;font:700 34px Georgia,serif;color:#1B4332;line-height:1.1}.c span{color:#4C5A50;font-size:14px}.c small{display:block;color:#7A7161;font-size:12px;margin-top:4px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #DED4BC;border-radius:14px;overflow:hidden;font-size:14px}th,td{padding:9px 12px;text-align:left;border-bottom:1px solid #EEE8D8}th{background:#EEE8D8;font-weight:600}td.n{font-variant-numeric:tabular-nums}.bar{display:inline-block;height:9px;border-radius:5px;background:#2F6B4A;vertical-align:middle;margin-right:8px}
+.note{color:#4C5A50;font-size:13px;background:rgba(27,67,50,.06);border:1px solid #DED4BC;border-radius:10px;padding:11px 14px;margin-top:14px}
+.btn{display:inline-block;background:#1B4332;color:#F5F1E6;border:0;border-radius:999px;padding:11px 20px;font:700 14px system-ui;text-decoration:none;cursor:pointer}
+input{width:100%;max-width:340px;padding:11px 14px;border:1px solid #DED4BC;border-radius:10px;font-size:15px;margin-right:8px}
+#err{color:#B4433A;font-size:14px;margin-top:8px}.hide{display:none}
+</style></head><body><div class="w">
+<h1>Retrio : chiffres du jour</h1><p class="sub" id="sub">Comptes, essais et abonnements, lus en direct sur le serveur.</p>
+<div id="login"><p>Saisissez le mot de passe d'administration (il reste uniquement dans ce navigateur).</p>
+<form id="f"><input id="tok" type="password" autocomplete="off" placeholder="Mot de passe d'administration"><button class="btn" type="submit">Voir les chiffres</button></form><div id="err"></div></div>
+<div id="out" class="hide">
+<h2>Inscriptions (essai 15 jours)</h2><div class="g" id="g1"></div>
+<h2>Abonnements payants (9,99 € / mois)</h2><div class="g" id="g2"></div>
+<h2>14 derniers jours</h2><table><thead><tr><th>Jour</th><th>Nouveaux comptes</th><th>Nouveaux abonnés payants</th></tr></thead><tbody id="rows"></tbody></table>
+<h2>Visites du site, clics sur Télécharger, invités</h2>
+<p class="note">Ces trois chiffres sont dans PostHog (visites, clic sur « Télécharger », première ouverture du logiciel). Ils ne comptent que les personnes qui ont accepté les statistiques : ce sont donc des minimums.</p>
+<p><a class="btn" href="https://us.posthog.com" target="_blank" rel="noopener">Ouvrir PostHog</a> <button class="btn" id="out2" style="background:#5B7364">Se déconnecter</button></p>
+<p class="sub" id="gen"></p></div></div>
+<script>
+var API="https://retrio-backend.onrender.com/api/admin/stats",K="retrio_stats_tok";
+function T(){try{return localStorage.getItem(K)||""}catch(e){return ""}}
+function nf(n){return Number(n||0).toLocaleString("fr-FR")}
+function card(v,l,s){return '<div class="c"><b>'+nf(v)+'</b><span>'+l+'</span>'+(s?'<small>'+s+'</small>':'')+'</div>'}
+async function load(tok){
+  var e=document.getElementById("err");e.textContent="Chargement… (le serveur peut mettre jusqu'à une minute à se réveiller)";
+  try{
+    var r=await fetch(API,{headers:{"x-admin-token":tok}});
+    if(r.status===401){e.textContent="Mot de passe incorrect.";try{localStorage.removeItem(K)}catch(x){}return}
+    if(!r.ok)throw new Error(r.status);
+    var d=await r.json();try{localStorage.setItem(K,tok)}catch(x){}
+    e.textContent="";document.getElementById("login").classList.add("hide");document.getElementById("out").classList.remove("hide");
+    document.getElementById("g1").innerHTML=card(d.accounts.today,"nouveaux aujourd'hui")+card(d.accounts.last7,"sur 7 jours")+card(d.accounts.total,"comptes au total",nf(d.accounts.verified)+" avec e-mail vérifié")+card(d.trial.active,"essais en cours")+card(d.trial.expired,"essais terminés");
+    document.getElementById("g2").innerHTML=card(d.paid.active,"abonnés payants actifs")+card(d.paid.canceled_or_expired,"résiliés ou expirés")+card(d.paid.ever,"abonnements souscrits depuis le début");
+    var max=Math.max.apply(null,d.days.map(function(x){return x.signups}).concat([1]));
+    document.getElementById("rows").innerHTML=d.days.slice().reverse().map(function(x){return '<tr><td>'+x.day.split("-").reverse().join("/")+'</td><td class="n"><span class="bar" style="width:'+Math.round(x.signups/max*120)+'px"></span>'+x.signups+'</td><td class="n">'+x.paid+'</td></tr>'}).join("");
+    document.getElementById("gen").textContent="Mis à jour : "+new Date(d.generated_at).toLocaleString("fr-FR");
+  }catch(x){e.textContent="Impossible de charger les chiffres. Réessayez dans un instant."}
+}
+document.getElementById("f").addEventListener("submit",function(ev){ev.preventDefault();var t=document.getElementById("tok").value.trim();if(t)load(t)});
+document.getElementById("out2").addEventListener("click",function(){try{localStorage.removeItem(K)}catch(x){}location.reload()});
+if(T())load(T());
+</script></body></html>
